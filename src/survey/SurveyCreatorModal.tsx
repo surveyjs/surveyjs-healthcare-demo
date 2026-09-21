@@ -2,10 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { SurveyCreator, SurveyCreatorComponent } from 'survey-creator-react';
 import 'survey-core/survey-core.min.css';
 import 'survey-creator-core/survey-creator-core.min.css';
-import './surveyjs-tailwind-adapter.css';
+import './survey-theme.css';
+import { DefaultLightPanelless } from 'survey-core/themes';
 import { FormId } from '../types/forms';
 import { formRepository } from '../repositories/formRepository';
-import { clinicalTheme } from './clinicalTheme';
 import { Check, RotateCcw, X, Sparkles } from 'lucide-react';
 
 interface SurveyCreatorModalProps {
@@ -36,7 +36,7 @@ export const SurveyCreatorModal: React.FC<SurveyCreatorModalProps> = ({
     const inst = new SurveyCreator(options);
     const schema = formRepository.getForm(formId);
     inst.JSON = schema;
-    inst.theme = clinicalTheme;
+    inst.theme = DefaultLightPanelless;
 
     inst.saveSurveyFunc = (saveNo: number, callback: (no: number, isSuccess: boolean) => void) => {
       formRepository.saveForm(formId, inst.JSON);
