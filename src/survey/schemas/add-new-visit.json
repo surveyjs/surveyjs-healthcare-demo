@@ -1,0 +1,120 @@
+{
+  "title": "Add New Visit",
+  "pages": [
+    {
+      "name": "visits",
+      "elements": [
+        {
+          "type": "text",
+          "name": "visit_date",
+          "title": "Visit Date",
+          "setValueIf": "{visit_list[0].visit_date} notempty",
+          "isRequired": true,
+          "validators": [
+            {
+              "type": "expression",
+              "expression": "{panel.visit_date} >= 'today()'"
+            }
+          ],
+          "maskType": "datetime",
+          "maskSettings": {
+            "pattern": "mm/dd/yyyy",
+            "min": "2026-09-08"
+          }
+        },
+        {
+          "type": "text",
+          "name": "visit_time",
+          "startWithNewLine": false,
+          "title": "Visit Time",
+          "inputType": "time"
+        },
+        {
+          "type": "dropdown",
+          "name": "visit_type",
+          "title": "Visit Type",
+          "isRequired": true,
+          "choices": [
+            {
+              "value": "consultation",
+              "text": "Consultation"
+            },
+            {
+              "value": "follow_up",
+              "text": "Follow-up"
+            },
+            {
+              "value": "emergency",
+              "text": "Emergency"
+            },
+            {
+              "value": "routine",
+              "text": "Routine"
+            }
+          ]
+        },
+        {
+          "type": "dropdown",
+          "name": "practitioner",
+          "startWithNewLine": false,
+          "title": "Practitioner",
+          "choices": [
+            {
+              "value": "dr_smith",
+              "text": "Dr. Smith"
+            },
+            {
+              "value": "dr_jones",
+              "text": "Dr. Jones"
+            },
+            {
+              "value": "dr_williams",
+              "text": "Dr. Williams"
+            }
+          ],
+          "showOtherItem": true,
+          "otherPlaceholder": "",
+          "otherText": "Other"
+        },
+        {
+          "type": "text",
+          "name": "reason_for_visit",
+          "title": "Reason for Visit"
+        },
+        {
+          "type": "text",
+          "name": "diagnosis",
+          "startWithNewLine": false,
+          "title": "Diagnosis"
+        },
+        {
+          "type": "text",
+          "name": "follow_up_date",
+          "startWithNewLine": false,
+          "title": "Follow-up Date",
+          "maskType": "datetime",
+          "maskSettings": {
+            "pattern": "mm/dd/yyyy"
+          }
+        },
+        {
+          "type": "comment",
+          "name": "symptoms_notes",
+          "title": "Symptoms/Notes"
+        },
+        {
+          "type": "comment",
+          "name": "treatment_recommendations",
+          "title": "Treatment/Recommendations"
+        },
+        {
+          "type": "comment",
+          "name": "internal_notes",
+          "title": "Internal Notes"
+        }
+      ]
+    }
+  ],
+  "completeText": "Save Visit",
+  "headerView": "advanced"
+}

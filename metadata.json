@@ -1,0 +1,6 @@
+{
+  "name": "Patient Management System",
+  "description": "Healthcare patient management, clinical records, visits, prescriptions, and customizable SurveyJS forms.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

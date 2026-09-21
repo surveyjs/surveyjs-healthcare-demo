@@ -1,0 +1,117 @@
+{
+  "title": "Add New Prescription",
+  "pages": [
+    {
+      "name": "prescribed_medication",
+      "elements": [
+        {
+          "type": "text",
+          "name": "medication",
+          "title": "Medication",
+          "isRequired": true
+        },
+        {
+          "type": "dropdown",
+          "name": "frequency",
+          "startWithNewLine": false,
+          "title": "Frequency",
+          "choices": [
+            {
+              "value": "once_daily",
+              "text": "Once daily"
+            },
+            {
+              "value": "twice_daily",
+              "text": "Twice daily"
+            },
+            {
+              "value": "three_times_daily",
+              "text": "Three times daily"
+            },
+            {
+              "value": "four_times_daily",
+              "text": "Four times daily"
+            },
+            {
+              "value": "as_needed",
+              "text": "As needed"
+            }
+          ],
+          "showOtherItem": true
+        },
+        {
+          "type": "text",
+          "name": "question1",
+          "title": "Dosage",
+          "maskType": "numeric",
+          "maskSettings": {
+            "precision": 3
+          }
+        },
+        {
+          "type": "dropdown",
+          "name": "unit",
+          "startWithNewLine": false,
+          "title": "Unit",
+          "choices": [
+            "mg",
+            "g",
+            "micrograms",
+            {
+              "value": "ml",
+              "text": "mL"
+            },
+            {
+              "value": "tablets",
+              "text": "tablet(s)"
+            },
+            {
+              "value": "capsules",
+              "text": "capsule(s)"
+            },
+            {
+              "value": "units",
+              "text": "unit(s)"
+            },
+            {
+              "value": "drops",
+              "text": "drop(s)"
+            },
+            {
+              "value": "puffs",
+              "text": "puff(s)"
+            },
+            {
+              "value": "sprays",
+              "text": "spray(s)"
+            },
+            {
+              "value": "patches",
+              "text": "patch(es)"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "name": "start_date",
+          "title": "Start Date",
+          "inputType": "date"
+        },
+        {
+          "type": "text",
+          "name": "end_date",
+          "startWithNewLine": false,
+          "title": "End Date",
+          "inputType": "date"
+        },
+        {
+          "type": "comment",
+          "name": "instructions",
+          "title": "Instructions"
+        }
+      ]
+    }
+  ],
+  "completeText": "Save Prescription",
+  "headerView": "advanced"
+}

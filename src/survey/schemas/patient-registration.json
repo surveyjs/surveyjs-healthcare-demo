@@ -1,0 +1,256 @@
+{
+  "title": "Patient Registration Form",
+  "pages": [
+    {
+      "name": "patient_registration",
+      "elements": [
+        {
+          "type": "text",
+          "name": "first_name",
+          "title": "First Name",
+          "isRequired": true,
+          "autocomplete": "name"
+        },
+        {
+          "type": "text",
+          "name": "last_name",
+          "startWithNewLine": false,
+          "title": "Last Name",
+          "isRequired": true,
+          "autocomplete": "name"
+        },
+        {
+          "type": "text",
+          "name": "date_of_birth",
+          "title": "Date of Birth",
+          "isRequired": true,
+          "inputType": "date",
+          "autocomplete": "bday"
+        },
+        {
+          "type": "dropdown",
+          "name": "gender",
+          "startWithNewLine": false,
+          "title": "Gender at Birth",
+          "isRequired": true,
+          "choices": [
+            {
+              "value": "male",
+              "text": "Male"
+            },
+            {
+              "value": "female",
+              "text": "Female"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "name": "phone_number",
+          "startWithNewLine": false,
+          "title": "Phone Number",
+          "description": "E.g. 07123 456789",
+          "descriptionLocation": "underInput",
+          "isRequired": true,
+          "inputType": "tel",
+          "autocomplete": "tel",
+          "maskType": "pattern",
+          "maskSettings": {
+            "pattern": "99999 999999"
+          }
+        },
+        {
+          "type": "text",
+          "name": "nhs-number",
+          "title": "NHS Number",
+          "isRequired": true,
+          "autocomplete": "bday",
+          "maskType": "pattern",
+          "maskSettings": {
+            "pattern": "999 999 9999"
+          }
+        },
+        {
+          "type": "text",
+          "name": "email",
+          "startWithNewLine": false,
+          "title": "Email",
+          "description": "full.name@example.com",
+          "descriptionLocation": "underInput",
+          "isRequired": true,
+          "inputType": "email",
+          "autocomplete": "email"
+        },
+        {
+          "type": "panel",
+          "name": "addres",
+          "title": "Address",
+          "elements": [
+            {
+              "type": "text",
+              "name": "address-line-1",
+              "title": "Address line 1",
+              "description": "house number/name and street"
+            },
+            {
+              "type": "text",
+              "name": "address-line-2",
+              "startWithNewLine": false,
+              "title": "Address line 2",
+              "description": "apartment, building, locality (optional)"
+            },
+            {
+              "type": "text",
+              "name": "town-city",
+              "title": "Town or city"
+            },
+            {
+              "type": "text",
+              "name": "county",
+              "startWithNewLine": false,
+              "title": "County",
+              "description": "(optional)"
+            },
+            {
+              "type": "text",
+              "name": "postcode",
+              "title": "Postcode",
+              "maskType": "pattern",
+              "maskSettings": {
+                "pattern": "aa99 9aa"
+              }
+            },
+            {
+              "type": "dropdown",
+              "name": "country",
+              "startWithNewLine": false,
+              "title": "Country",
+              "defaultValue": "United Kingdom",
+              "choices": [
+                {
+                  "value": "item1",
+                  "text": "Item 1"
+                },
+                {
+                  "value": "item2",
+                  "text": "Item 2"
+                },
+                {
+                  "value": "item3",
+                  "text": "Item 3"
+                }
+              ],
+              "choicesByUrl": {
+                "url": "https://surveyjs.io/api/CountriesExample"
+              }
+            }
+          ]
+        },
+        {
+          "type": "panel",
+          "name": "emergency_contact",
+          "title": "Emergency Contact",
+          "elements": [
+            {
+              "type": "text",
+              "name": "emergency_contact_full_name",
+              "title": "Full Name"
+            },
+            {
+              "type": "text",
+              "name": "emergency_contact_phone_number",
+              "title": "Phone Number",
+              "description": "E.g. 07123 456789",
+              "descriptionLocation": "underInput",
+              "isRequired": true,
+              "inputType": "tel",
+              "autocomplete": "tel",
+              "maskType": "pattern",
+              "maskSettings": {
+                "pattern": "99999 999999"
+              }
+            },
+            {
+              "type": "dropdown",
+              "name": "emergency_contact_relationship",
+              "title": "What is this person’s relationship to you?",
+              "choices": [
+                {
+                  "value": "spouse-partner",
+                  "text": "Spouse or partner"
+                },
+                {
+                  "value": "parent",
+                  "text": "Parent"
+                },
+                {
+                  "value": "child",
+                  "text": "Child"
+                },
+                {
+                  "value": "sibling",
+                  "text": "Sibling"
+                },
+                {
+                  "value": "other-family-member",
+                  "text": "Other family member"
+                },
+                {
+                  "value": "friend",
+                  "text": "Friend"
+                },
+                {
+                  "value": "carer",
+                  "text": "Carer"
+                },
+                {
+                  "value": "legal-guardian",
+                  "text": "Legal guardian"
+                },
+                {
+                  "value": "other",
+                  "text": "Other"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "dropdown",
+          "name": "insurance_provider",
+          "title": "Insurance Provider",
+          "choices": [
+            {
+              "value": "aetna",
+              "text": "Aetna"
+            },
+            {
+              "value": "bcbs",
+              "text": "Blue Cross Blue Shield"
+            },
+            {
+              "value": "cigna",
+              "text": "Cigna"
+            },
+            {
+              "value": "unitedhealthcare",
+              "text": "UnitedHealthcare"
+            }
+          ],
+          "showNoneItem": true,
+          "otherPlaceholder": "Please specify",
+          "noneText": "No private health insurance",
+          "otherText": "Other",
+          "allowCustomChoices": true
+        },
+        {
+          "type": "comment",
+          "name": "known_allergies",
+          "title": "Known Allergies"
+        }
+      ]
+    }
+  ],
+  "completeText": "Save Patient",
+  "headerView": "advanced"
+}
