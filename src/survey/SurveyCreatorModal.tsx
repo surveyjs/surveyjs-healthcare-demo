@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { SurveyCreator, SurveyCreatorComponent } from 'survey-creator-react';
 import 'survey-core/survey-core.min.css';
 import 'survey-creator-core/survey-creator-core.min.css';
-import './survey-theme.css';
+import './tailwind-adapter.css';
 import { DefaultLightPanelless } from 'survey-core/themes';
 import { FormId } from '../types/forms';
 import { formRepository } from '../repositories/formRepository';

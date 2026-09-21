@@ -58,7 +58,7 @@ src/
     schemas/            SurveyJS JSON definitions
     SurveyRenderer      Reusable renderer (Model creation, initial data, validation, completion)
     SurveyCreatorModal  Embedded Survey Creator
-    survey-theme.css    SurveyJS design-token overrides mapped to the app's Tailwind variables
+    tailwind-adapter.css  Generic SurveyJS ↔ Tailwind v4 theme adapter (semantic-variable contract)
   data/
     initialData         Seed demo patients
   types/                Patient and form type definitions

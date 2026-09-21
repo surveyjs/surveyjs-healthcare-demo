@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
-/* Host design tokens — also consumed by src/survey/survey-theme.css */
+/* Host design tokens — the semantic slots consumed by src/survey/tailwind-adapter.css */
 @theme static {
   --font-sans: 'Open Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --color-brand: #00695c;
-  --color-brand-dark: #004d40;
+  --color-primary: #00695c;
+  --color-primary-hover: #004d40;
 }
 
 @layer base {

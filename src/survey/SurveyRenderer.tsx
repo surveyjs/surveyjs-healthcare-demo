@@ -3,7 +3,7 @@ import { Model } from 'survey-core';
 import { DefaultLightPanelless } from 'survey-core/themes';
 import { Survey } from 'survey-react-ui';
 import 'survey-core/survey-core.min.css';
-import './survey-theme.css';
+import './tailwind-adapter.css';
 
 export interface SurveyRendererProps {
   schema: object;
@@ -34,7 +34,7 @@ export const SurveyRenderer: React.FC<SurveyRendererProps> = ({
     // Create new SurveyJS model from provided schema
     const model = new Model(schema);
 
-    // Panelless base; the host look comes from token overrides in survey-theme.css
+    // Panelless base; the host look comes from the Tailwind adapter (tailwind-adapter.css)
     model.applyTheme(DefaultLightPanelless);
 
     // Titles are rendered by the host pages/modals
