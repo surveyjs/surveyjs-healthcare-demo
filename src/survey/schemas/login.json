@@ -1,0 +1,63 @@
+{
+  "title": "Clinic Portal Sign In",
+  "pages": [
+    {
+      "name": "sign_in",
+      "description": "Sign in with your clinic credentials, or pick a pre-registered account from the demo roster.",
+      "elements": [
+        {
+          "type": "dropdown",
+          "name": "roster_user",
+          "title": "Demo Roster Quick Sign-In",
+          "description": "Selecting a pre-registered doctor or patient fills in their credentials.",
+          "placeholder": "Select a roster account...",
+          "choicesByUrl": {
+            "url": "/api/auth/roster",
+            "valueName": "username",
+            "titleName": "label"
+          }
+        },
+        {
+          "type": "text",
+          "name": "username",
+          "title": "Username",
+          "isRequired": true,
+          "placeholder": "e.g. sarah.miller",
+          "autocomplete": "username"
+        },
+        {
+          "type": "text",
+          "name": "password",
+          "title": "Password",
+          "description": "Every demo account uses the password demo1234.",
+          "isRequired": true,
+          "inputType": "password",
+          "placeholder": "Enter your password",
+          "autocomplete": "current-password"
+        },
+        {
+          "type": "boolean",
+          "name": "remember_me",
+          "title": "Keep me signed in on this device",
+          "titleLocation": "hidden",
+          "displayMode": "checkbox"
+        }
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "type": "copyvalue",
+      "expression": "{roster_user} notempty",
+      "fromName": "roster_user",
+      "setToName": "username"
+    },
+    {
+      "type": "setvalue",
+      "expression": "{roster_user} notempty",
+      "setToName": "password",
+      "setValue": "demo1234"
+    }
+  ],
+  "completeText": "Sign In"
+}

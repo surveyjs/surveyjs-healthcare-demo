@@ -1,4 +1,5 @@
 import { Patient } from '../types/patient';
+import { DemoUser } from '../types/auth';
 
 export const INITIAL_PATIENTS: Patient[] = [
   {
@@ -182,5 +183,41 @@ export const INITIAL_PATIENTS: Patient[] = [
         status: 'Active',
       },
     ],
+  },
+];
+
+/** Shared password for every pre-provisioned demo account. */
+export const DEMO_PASSWORD = 'demo1234';
+
+export const INITIAL_USERS: DemoUser[] = [
+  {
+    id: 'u-sarah-miller',
+    username: 'sarah.miller',
+    password: DEMO_PASSWORD,
+    fullName: 'Dr. Sarah Miller',
+    role: 'doctor',
+  },
+  {
+    id: 'u-mark-jones',
+    username: 'mark.jones',
+    password: DEMO_PASSWORD,
+    fullName: 'Dr. Mark Jones',
+    role: 'doctor',
+  },
+  {
+    id: 'u-emma-thompson',
+    username: 'emma.thompson',
+    password: DEMO_PASSWORD,
+    fullName: 'Emma Thompson',
+    role: 'patient',
+    patientId: 'p-emma-thompson',
+  },
+  {
+    id: 'u-david-miller',
+    username: 'david.miller',
+    password: DEMO_PASSWORD,
+    fullName: 'David Miller',
+    role: 'patient',
+    patientId: 'p-david-miller',
   },
 ];

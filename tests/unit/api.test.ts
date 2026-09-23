@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { createDb, HealthcareDb } from '../../server/db';
 import { createApp } from '../../server/app';
-import { INITIAL_PATIENTS } from '../../src/data/initialData';
+import { INITIAL_PATIENTS, INITIAL_USERS, DEMO_PASSWORD } from '../../src/data/initialData';
 
 let db: HealthcareDb;
 let server: Server;
@@ -167,6 +167,65 @@ describe('form schemas API', () => {
 
   it('rejects non-object schema bodies', async () => {
     const res = await api('/forms/patient-registration', { method: 'PUT', body: JSON.stringify([1, 2]) });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('auth API', () => {
+  it('GET /api/auth/roster lists the seeded demo users without secrets', async () => {
+    await api('/admin/reset', { method: 'POST' });
+    const res = await api('/auth/roster');
+    expect(res.status).toBe(200);
+    const roster = await res.json();
+    expect(roster.map((u: any) => u.username)).toEqual(INITIAL_USERS.map((u) => u.username));
+    expect(roster.filter((u: any) => u.role === 'doctor')).toHaveLength(2);
+    expect(roster.filter((u: any) => u.role === 'patient')).toHaveLength(2);
+    for (const entry of roster) {
+      expect(entry.label).toContain(entry.fullName);
+      expect(entry).not.toHaveProperty('password');
+      expect(entry).not.toHaveProperty('password_hash');
+    }
+  });
+
+  it('POST /api/auth/login authenticates a seeded doctor', async () => {
+    const res = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'sarah.miller', password: DEMO_PASSWORD }),
+    });
+    expect(res.status).toBe(200);
+    const user = await res.json();
+    expect(user.fullName).toBe('Dr. Sarah Miller');
+    expect(user.role).toBe('doctor');
+    expect(user).not.toHaveProperty('password_hash');
+  });
+
+  it('POST /api/auth/login links patient accounts to their patient record', async () => {
+    const res = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'emma.thompson', password: DEMO_PASSWORD }),
+    });
+    expect(res.status).toBe(200);
+    const user = await res.json();
+    expect(user.role).toBe('patient');
+    expect(user.patientId).toBe('p-emma-thompson');
+  });
+
+  it('POST /api/auth/login rejects invalid credentials with 401', async () => {
+    const wrongPassword = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'sarah.miller', password: 'nope' }),
+    });
+    expect(wrongPassword.status).toBe(401);
+
+    const unknownUser = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'ghost', password: DEMO_PASSWORD }),
+    });
+    expect(unknownUser.status).toBe(401);
+  });
+
+  it('POST /api/auth/login validates the request body', async () => {
+    const res = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username: 'x' }) });
     expect(res.status).toBe(400);
   });
 });

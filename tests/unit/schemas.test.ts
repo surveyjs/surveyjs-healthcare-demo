@@ -7,8 +7,10 @@ import addNewVisit from '../../src/survey/schemas/add-new-visit.json';
 import addNewPrescription from '../../src/survey/schemas/add-new-prescription.json';
 import patientVisits from '../../src/survey/schemas/patient-visits.json';
 import prescribedMedication from '../../src/survey/schemas/prescribed-medication.json';
+import login from '../../src/survey/schemas/login.json';
 
 const schemas: Record<string, object> = {
+  login,
   'patient-registration': patientRegistration,
   'patient-search': patientSearch,
   'edit-patient': editPatient,

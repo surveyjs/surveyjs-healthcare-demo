@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { bypassLoginAsDoctor } from './auth-helpers';
 
-test.beforeEach(async ({ request }) => {
+test.beforeEach(async ({ page, request }) => {
   await request.post('/api/admin/reset');
+  await bypassLoginAsDoctor(page);
 });
 
 test('manage patients screen lists all patients from the SQLite database', async ({ page }) => {

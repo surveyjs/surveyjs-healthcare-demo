@@ -1,8 +1,10 @@
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { Patient, Visit, Prescription } from '../src/types/patient';
-import { INITIAL_PATIENTS } from '../src/data/initialData';
+import { AuthUser, RosterEntry, UserRole } from '../src/types/auth';
+import { INITIAL_PATIENTS, INITIAL_USERS } from '../src/data/initialData';
 import { calculateAge } from '../src/utils/age';
 
 const SCHEMA_SQL = `
@@ -68,7 +70,21 @@ CREATE TABLE IF NOT EXISTS form_schemas (
   json       TEXT NOT NULL,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id            TEXT PRIMARY KEY,
+  username      TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  full_name     TEXT NOT NULL,
+  role          TEXT NOT NULL,
+  patient_id    TEXT,
+  seq           INTEGER NOT NULL DEFAULT 0
+);
 `;
+
+function hashPassword(password: string): string {
+  return createHash('sha256').update(password).digest('hex');
+}
 
 export interface PatientSearchQuery {
   lastName?: string;
@@ -289,9 +305,46 @@ export function createDb(dbPath: string) {
     INITIAL_PATIENTS.forEach((p, i) => insertFullPatient(p, n - i));
   });
 
+  const insertUserStmt = db.prepare(`
+    INSERT INTO users (id, username, password_hash, full_name, role, patient_id, seq)
+    VALUES (@id, @username, @passwordHash, @fullName, @role, @patientId, @seq)
+  `);
+
+  const seedUsers = db.transaction(() => {
+    INITIAL_USERS.forEach((u, i) =>
+      insertUserStmt.run({
+        id: u.id,
+        username: u.username,
+        passwordHash: hashPassword(u.password),
+        fullName: u.fullName,
+        role: u.role,
+        patientId: u.patientId ?? null,
+        seq: i + 1,
+      }),
+    );
+  });
+
   const patientCount = db.prepare('SELECT COUNT(*) AS c FROM patients').get() as { c: number };
   if (patientCount.c === 0) {
     seed();
+  }
+
+  const userCount = db.prepare('SELECT COUNT(*) AS c FROM users').get() as { c: number };
+  if (userCount.c === 0) {
+    seedUsers();
+  }
+
+  function rowToAuthUser(row: any): AuthUser {
+    const user: AuthUser = {
+      id: row.id,
+      username: row.username,
+      fullName: row.full_name,
+      role: row.role as UserRole,
+    };
+    if (row.patient_id) {
+      user.patientId = row.patient_id;
+    }
+    return user;
   }
 
   return {
@@ -366,9 +419,36 @@ export function createDb(dbPath: string) {
         db.prepare('DELETE FROM visits').run();
         db.prepare('DELETE FROM patients').run();
         db.prepare('DELETE FROM form_schemas').run();
+        db.prepare('DELETE FROM users').run();
         seed();
+        seedUsers();
       });
       wipeAndSeed();
+    },
+
+    listUserRoster(): RosterEntry[] {
+      const rows = db
+        .prepare('SELECT username, full_name, role FROM users ORDER BY seq ASC')
+        .all() as { username: string; full_name: string; role: UserRole }[];
+      return rows.map((row) => ({
+        username: row.username,
+        fullName: row.full_name,
+        role: row.role,
+        label: `${row.full_name} (${row.role === 'doctor' ? 'Doctor' : 'Patient'})`,
+      }));
+    },
+
+    authenticateUser(username: string, password: string): AuthUser | undefined {
+      const row = db.prepare('SELECT * FROM users WHERE username = ?').get(username.trim()) as
+        | any
+        | undefined;
+      if (!row) return undefined;
+      const expected = Buffer.from(row.password_hash, 'hex');
+      const actual = Buffer.from(hashPassword(password), 'hex');
+      if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+        return undefined;
+      }
+      return rowToAuthUser(row);
     },
 
     listFormSchemas(): Record<string, object> {

@@ -3,15 +3,19 @@ import { Header, NavTab } from './components/layout/Header';
 import { RegisterPatientPage } from './pages/RegisterPatientPage';
 import { ManagePatientsPage } from './pages/ManagePatientsPage';
 import { PatientProfilePage } from './pages/PatientProfilePage';
+import { LoginPage } from './pages/LoginPage';
 import { SurveyCreatorModal } from './survey/SurveyCreatorModal';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { FormId } from './types/forms';
 import { Patient } from './types/patient';
+import { AuthUser } from './types/auth';
 import { patientRepository } from './repositories/patientRepository';
+import { authRepository } from './repositories/authRepository';
 import { formRepository, FORM_METADATA_LIST } from './repositories/formRepository';
 import { Pill, ShieldCheck, Settings, Users, Sparkles, Building2 } from 'lucide-react';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authRepository.getStoredUser());
   const [activeTab, setActiveTab] = useState<NavTab>('manage');
   const [selectedPatientId, setSelectedPatientId] = useState<string>('p-emma-thompson');
   const [builderFormId, setBuilderFormId] = useState<FormId | null>(null);
@@ -61,14 +65,31 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    showToast('info', 'Session Logout', 'Dr. Sarah Miller session concluded. (Demo Mode: Re-logged in automatically)');
+    authRepository.clearStoredUser();
+    setCurrentUser(null);
+    setActiveTab('manage');
   };
+
+  const handleLogin = (user: AuthUser) => {
+    setCurrentUser(user);
+    showToast('success', 'Signed In', `Welcome, ${user.fullName}.`);
+  };
+
+  if (!currentUser) {
+    return (
+      <>
+        <LoginPage onLogin={handleLogin} />
+        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-gray-800 antialiased selection:bg-teal-100 selection:text-teal-900">
       {/* Top Application Navigation Bar matching screenshot */}
       <Header
         activeTab={activeTab}
+        userName={currentUser.fullName}
         onTabChange={(tab) => {
           if (tab === 'profile') {
             setActiveTab('manage');
@@ -205,7 +226,7 @@ export default function App() {
                     <Sparkles className="w-4 h-4 text-[#00695c]" />
                     SurveyJS Schemas
                   </h2>
-                  <span className="text-xs text-gray-500">7 Active Forms</span>
+                  <span className="text-xs text-gray-500">{FORM_METADATA_LIST.length} Active Forms</span>
                 </div>
 
                 <div className="space-y-3">

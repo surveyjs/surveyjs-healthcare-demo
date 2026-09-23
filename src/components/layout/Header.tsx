@@ -5,11 +5,12 @@ export type NavTab = 'register' | 'manage' | 'profile' | 'medications' | 'settin
 
 interface HeaderProps {
   activeTab: NavTab;
+  userName: string;
   onTabChange: (tab: NavTab) => void;
   onLogout?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, onLogout }) => {
+export const Header: React.FC<HeaderProps> = ({ activeTab, userName, onTabChange, onLogout }) => {
   return (
     <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
@@ -27,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange, onLogout
           </div>
 
           <div className="text-sm text-gray-700">
-            Logged in as: <span className="font-semibold text-[#00695c]">Dr. Sarah Miller</span>
+            Logged in as: <span className="font-semibold text-[#00695c]">{userName}</span>
           </div>
 
           <div className="h-5 w-px bg-gray-300" />

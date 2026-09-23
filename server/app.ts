@@ -9,6 +9,24 @@ export function createApp(db: HealthcareDb): Express {
     res.json({ status: 'ok' });
   });
 
+  app.get('/api/auth/roster', (_req, res) => {
+    res.json(db.listUserRoster());
+  });
+
+  app.post('/api/auth/login', (req, res) => {
+    const body = req.body;
+    if (!body || typeof body.username !== 'string' || typeof body.password !== 'string') {
+      res.status(400).json({ error: 'username and password are required' });
+      return;
+    }
+    const user = db.authenticateUser(body.username, body.password);
+    if (!user) {
+      res.status(401).json({ error: 'Invalid username or password' });
+      return;
+    }
+    res.json(user);
+  });
+
   app.get('/api/patients', (req, res) => {
     const { lastName, dateOfBirth, nhsNumber } = req.query;
     const patients = db.listPatients({

@@ -1,13 +1,15 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
+import { bypassLoginAsDoctor } from './auth-helpers';
 
 const patientSearchSchema = JSON.parse(
   fs.readFileSync(path.resolve('src/survey/schemas/patient-search.json'), 'utf8'),
 );
 
-test.beforeEach(async ({ request }) => {
+test.beforeEach(async ({ page, request }) => {
   await request.post('/api/admin/reset');
+  await bypassLoginAsDoctor(page);
 });
 
 test('a customized schema stored in SQLite is rendered instead of the default', async ({ page, request }) => {

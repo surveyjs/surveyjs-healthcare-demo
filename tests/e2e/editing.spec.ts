@@ -1,7 +1,9 @@
 import { test, expect, Page } from '@playwright/test';
+import { bypassLoginAsDoctor } from './auth-helpers';
 
-test.beforeEach(async ({ request }) => {
+test.beforeEach(async ({ page, request }) => {
   await request.post('/api/admin/reset');
+  await bypassLoginAsDoctor(page);
 });
 
 async function openEmmaProfile(page: Page) {

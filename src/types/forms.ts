@@ -1,4 +1,5 @@
 export type FormId =
+  | 'login'
   | 'patient-registration'
   | 'patient-search'
   | 'edit-patient'
