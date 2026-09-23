@@ -118,6 +118,17 @@ describe('patients API', () => {
     expect(patient.visits).toHaveLength(2);
   });
 
+  it('DELETE /api/patients/:id/visits/:visitId revokes a visit and 404s for missing', async () => {
+    await api('/admin/reset', { method: 'POST' });
+    const res = await api('/patients/p-emma-thompson/visits/v2', { method: 'DELETE' });
+    expect(res.status).toBe(200);
+    const { patient } = await res.json();
+    expect(patient.visits.map((v: any) => v.id)).toEqual(['v1', 'v3']);
+
+    const missing = await api('/patients/p-emma-thompson/visits/v2', { method: 'DELETE' });
+    expect(missing.status).toBe(404);
+  });
+
   it('POST /api/patients/:id/prescriptions validates medication and adds', async () => {
     const bad = await api('/patients/p-david-miller/prescriptions', {
       method: 'POST',

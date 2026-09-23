@@ -84,6 +84,15 @@ export function createApp(db: HealthcareDb): Express {
     res.status(201).json({ visit, patient: db.getPatient(req.params.id) });
   });
 
+  app.delete('/api/patients/:id/visits/:visitId', (req, res) => {
+    const removed = db.removeVisit(req.params.id, req.params.visitId);
+    if (!removed) {
+      res.status(404).json({ error: 'Visit not found' });
+      return;
+    }
+    res.json({ status: 'deleted', patient: db.getPatient(req.params.id) });
+  });
+
   app.post('/api/patients/:id/prescriptions', (req, res) => {
     const body = req.body;
     if (!body || typeof body.medication !== 'string' || !body.medication.trim()) {

@@ -23,6 +23,8 @@ export default function App() {
   const [allPatients, setAllPatients] = useState<Patient[]>([]);
 
   useEffect(() => {
+    // Patients only see their own record; skip loading the full registry
+    if (currentUser?.role !== 'doctor') return;
     const load = () => {
       patientRepository
         .getAllPatients()
@@ -31,7 +33,7 @@ export default function App() {
     };
     load();
     return patientRepository.subscribe(load);
-  }, []);
+  }, [currentUser?.role]);
 
   const showToast = (type: 'success' | 'error' | 'info', title: string, message?: string) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
@@ -81,6 +83,37 @@ export default function App() {
         <LoginPage onLogin={handleLogin} />
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       </>
+    );
+  }
+
+  // Patient portal: own profile only — no registry, no form builder, no prescribing
+  if (currentUser.role === 'patient') {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#f8fafc] text-gray-800 antialiased selection:bg-teal-100 selection:text-teal-900">
+        <Header
+          activeTab="profile"
+          role="patient"
+          userName={currentUser.fullName}
+          onTabChange={() => {}}
+          onLogout={handleLogout}
+        />
+
+        <main className="flex-1">
+          {currentUser.patientId ? (
+            <PatientProfilePage
+              patientId={currentUser.patientId}
+              viewerRole="patient"
+              showToast={showToast}
+            />
+          ) : (
+            <div className="max-w-7xl mx-auto px-4 py-12 text-center text-gray-500">
+              No patient record is linked to your account. Please contact the practice.
+            </div>
+          )}
+        </main>
+
+        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      </div>
     );
   }
 

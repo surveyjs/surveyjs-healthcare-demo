@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pill, Clock } from 'lucide-react';
+import { Pill, Clock, Trash2 } from 'lucide-react';
 import { Visit, Prescription } from '../../types/patient';
 
 interface PatientHistoryProps {
@@ -7,6 +7,7 @@ interface PatientHistoryProps {
   prescriptions: Prescription[];
   onOpenVisitModal?: () => void;
   onOpenPrescriptionModal?: () => void;
+  onRevokeVisit?: (visitId: string) => void;
 }
 
 export const PatientHistory: React.FC<PatientHistoryProps> = ({
@@ -14,6 +15,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
   prescriptions,
   onOpenVisitModal,
   onOpenPrescriptionModal,
+  onRevokeVisit,
 }) => {
   // Helper to format date into Day, Month Year, Time
   const parseVisitDate = (dateStr?: string, timeStr?: string) => {
@@ -60,7 +62,10 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
               </svg>
             </span>
             <h2 className="text-base font-bold text-gray-900">
-              Visits <span className="text-xs font-normal text-gray-500">(Past Visits - Read Only)</span>
+              Visits{' '}
+              <span className="text-xs font-normal text-gray-500">
+                {onRevokeVisit ? '(Your Visits)' : '(Past Visits - Read Only)'}
+              </span>
             </h2>
           </div>
           {onOpenVisitModal && (
@@ -112,7 +117,6 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
                         <span className="font-semibold text-gray-800">{visit.practitioner}</span>
                       </div>
                     </div>
-
                     {visit.reasonForVisit && (
                       <div>
                         <span className="text-gray-500 font-medium">Reason:</span>{' '}
@@ -135,6 +139,18 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {onRevokeVisit && (
+                    <button
+                      type="button"
+                      onClick={() => onRevokeVisit(visit.id)}
+                      className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                      title="Revoke this visit"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Revoke</span>
+                    </button>
+                  )}
                 </div>
               );
             })}

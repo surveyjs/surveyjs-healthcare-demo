@@ -99,6 +99,14 @@ describe('healthcare SQLite db', () => {
     expect(emma.visits[0].id).toBe(visit.id);
   });
 
+  it('removes a visit and reports whether anything was deleted', () => {
+    expect(db.removeVisit('p-emma-thompson', 'v2')).toBe(true);
+    expect(db.getPatient('p-emma-thompson')!.visits.map((v) => v.id)).toEqual(['v1', 'v3']);
+
+    expect(db.removeVisit('p-emma-thompson', 'v2')).toBe(false);
+    expect(db.removeVisit('nope', 'v1')).toBe(false);
+  });
+
   it('adds a prescription as the newest entry', () => {
     const rx = db.addPrescription('p-emma-thompson', {
       id: '',

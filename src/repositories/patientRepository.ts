@@ -79,6 +79,14 @@ export const patientRepository = {
     return result.visit;
   },
 
+  async removeVisit(patientId: string, visitId: string): Promise<void> {
+    await request<{ status: string }>(
+      `/patients/${encodeURIComponent(patientId)}/visits/${encodeURIComponent(visitId)}`,
+      { method: 'DELETE' },
+    );
+    notifyListeners();
+  },
+
   async addPrescription(patientId: string, rxData: Record<string, any>): Promise<Prescription> {
     const prescription = mapSurveyToPrescription(rxData);
     const result = await request<{ prescription: Prescription; patient: Patient }>(

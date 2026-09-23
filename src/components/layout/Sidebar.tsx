@@ -56,7 +56,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          {/* Form Builder Tools Card matching screenshot */}
+          {/* Form Builder Tools Card matching screenshot (staff only) */}
+          {onOpenFormBuilder && (
           <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-2xs space-y-3">
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-gray-900">Form Builder Tools</h3>
@@ -94,6 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             </div>
           </div>
+          )}
         </div>
       )}
     </aside>

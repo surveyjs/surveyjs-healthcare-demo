@@ -12,17 +12,21 @@ import { ArrowLeft } from 'lucide-react';
 
 interface PatientProfilePageProps {
   patientId: string;
-  onBackToSearch: () => void;
-  onOpenFormBuilder: (formId: FormId) => void;
+  /** 'patient' hides staff-only actions (form builder, prescriptions) and enables visit revocation. */
+  viewerRole?: 'doctor' | 'patient';
+  onBackToSearch?: () => void;
+  onOpenFormBuilder?: (formId: FormId) => void;
   showToast: (type: 'success' | 'error' | 'info', title: string, message?: string) => void;
 }
 
 export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
   patientId,
+  viewerRole = 'doctor',
   onBackToSearch,
   onOpenFormBuilder,
   showToast,
 }) => {
+  const isPatientViewer = viewerRole === 'patient';
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
@@ -63,18 +67,31 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
     return (
       <div className="max-w-7xl mx-auto px-4 py-12 text-center">
         <p className="text-gray-500 mb-4">Patient record not found.</p>
-        <button
-          type="button"
-          onClick={onBackToSearch}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[#00695c] hover:underline"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Manage Patients
-        </button>
+        {onBackToSearch && (
+          <button
+            type="button"
+            onClick={onBackToSearch}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#00695c] hover:underline"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Manage Patients
+          </button>
+        )}
       </div>
     );
   }
 
   const patientFullName = `${patient.firstName} ${patient.lastName}`;
+
+  const handleRevokeVisit = async (visitId: string) => {
+    if (!confirm('Revoke this visit? It will be removed from your record.')) return;
+    try {
+      await patientRepository.removeVisit(patient.id, visitId);
+      showToast('success', 'Visit revoked', 'The visit has been removed from your record.');
+    } catch (e) {
+      console.error('Failed to revoke visit:', e);
+      showToast('error', 'Revoke failed', 'The visit could not be revoked. Please try again.');
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -85,7 +102,6 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
           patientName={patientFullName}
           onOpenFormBuilder={onOpenFormBuilder}
         />
-
         {/* Main Profile Layout */}
         <div className="flex-1 w-full space-y-6">
           {/* Top Patient Profile Header & Details */}
@@ -93,7 +109,7 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
             patient={patient}
             onEditPatient={() => setIsEditModalOpen(true)}
             onAddVisit={() => setIsVisitModalOpen(true)}
-            onAddPrescription={() => setIsPrescriptionModalOpen(true)}
+            onAddPrescription={isPatientViewer ? undefined : () => setIsPrescriptionModalOpen(true)}
           />
 
           {/* Clinical Visits & Medication History */}
@@ -101,7 +117,8 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
             visits={patient.visits || []}
             prescriptions={patient.prescriptions || []}
             onOpenVisitModal={() => setIsVisitModalOpen(true)}
-            onOpenPrescriptionModal={() => setIsPrescriptionModalOpen(true)}
+            onOpenPrescriptionModal={isPatientViewer ? undefined : () => setIsPrescriptionModalOpen(true)}
+            onRevokeVisit={isPatientViewer ? handleRevokeVisit : undefined}
           />
         </div>
       </div>
@@ -115,10 +132,14 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
           setPatient(updated);
           showToast('success', 'Patient updated', 'Patient details successfully saved.');
         }}
-        onOpenBuilder={(formId) => {
-          setIsEditModalOpen(false);
-          onOpenFormBuilder(formId);
-        }}
+        onOpenBuilder={
+          onOpenFormBuilder
+            ? (formId) => {
+                setIsEditModalOpen(false);
+                onOpenFormBuilder(formId);
+              }
+            : undefined
+        }
       />
 
       {/* Add New Visit Modal */}
@@ -130,10 +151,14 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
           setPatient(updated);
           showToast('success', 'Visit recorded', 'Clinical encounter added to patient history.');
         }}
-        onOpenBuilder={(formId) => {
-          setIsVisitModalOpen(false);
-          onOpenFormBuilder(formId);
-        }}
+        onOpenBuilder={
+          onOpenFormBuilder
+            ? (formId) => {
+                setIsVisitModalOpen(false);
+                onOpenFormBuilder(formId);
+              }
+            : undefined
+        }
       />
 
       {/* Add New Prescription Modal */}
@@ -145,10 +170,14 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
           setPatient(updated);
           showToast('success', 'Prescription added', 'Medication course added to patient profile.');
         }}
-        onOpenBuilder={(formId) => {
-          setIsPrescriptionModalOpen(false);
-          onOpenFormBuilder(formId);
-        }}
+        onOpenBuilder={
+          onOpenFormBuilder
+            ? (formId) => {
+                setIsPrescriptionModalOpen(false);
+                onOpenFormBuilder(formId);
+              }
+            : undefined
+        }
       />
     </div>
   );

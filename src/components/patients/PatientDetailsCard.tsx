@@ -6,7 +6,7 @@ interface PatientDetailsCardProps {
   patient: Patient;
   onEditPatient: () => void;
   onAddVisit: () => void;
-  onAddPrescription: () => void;
+  onAddPrescription?: () => void;
 }
 
 export const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
@@ -101,14 +101,16 @@ export const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
             <span>Add New Visit</span>
           </button>
 
-          <button
-            type="button"
-            onClick={onAddPrescription}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-[#00695c] bg-white border border-[#00695c] rounded-md hover:bg-teal-50 transition-colors cursor-pointer shadow-2xs"
-          >
-            <Pill className="w-4 h-4 text-[#00695c]" />
-            <span>Add New Prescription</span>
-          </button>
+          {onAddPrescription && (
+            <button
+              type="button"
+              onClick={onAddPrescription}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-[#00695c] bg-white border border-[#00695c] rounded-md hover:bg-teal-50 transition-colors cursor-pointer shadow-2xs"
+            >
+              <Pill className="w-4 h-4 text-[#00695c]" />
+              <span>Add New Prescription</span>
+            </button>
+          )}
         </div>
       </div>
 

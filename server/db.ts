@@ -413,6 +413,13 @@ export function createDb(dbPath: string) {
       return withId;
     },
 
+    removeVisit(patientId: string, visitId: string): boolean {
+      const result = db
+        .prepare('DELETE FROM visits WHERE patient_id = ? AND id = ?')
+        .run(patientId, visitId);
+      return result.changes > 0;
+    },
+
     resetToInitial(): void {
       const wipeAndSeed = db.transaction(() => {
         db.prepare('DELETE FROM prescriptions').run();
