@@ -45,10 +45,10 @@ export const AddVisitModal: React.FC<AddVisitModalProps> = ({
     practitioner: 'dr_smith',
   };
 
-  const handleComplete = (data: Record<string, any>) => {
+  const handleComplete = async (data: Record<string, any>) => {
     try {
-      patientRepository.addVisit(patient.id, data);
-      const updated = patientRepository.getPatientById(patient.id);
+      await patientRepository.addVisit(patient.id, data);
+      const updated = await patientRepository.getPatientById(patient.id);
       if (updated) {
         onSaved(updated);
       }

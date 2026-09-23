@@ -23,17 +23,24 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Initial load: show Emma Thompson by default or all patients
+  // Initial load: show all patients from the database
   useEffect(() => {
-    const all = patientRepository.getAllPatients();
-    setSearchResults(all);
-    setHasSearched(true);
+    patientRepository
+      .getAllPatients()
+      .then((all) => {
+        setSearchResults(all);
+        setHasSearched(true);
+      })
+      .catch((e) => console.error('Failed to load patients:', e));
   }, []);
 
   // Subscribe to changes in patients or schema
   useEffect(() => {
     const unsubPatients = patientRepository.subscribe(() => {
-      setSearchResults(patientRepository.getAllPatients());
+      patientRepository
+        .getAllPatients()
+        .then(setSearchResults)
+        .catch((e) => console.error('Failed to reload patients:', e));
     });
 
     const unsubForms = formRepository.subscribe((changedId) => {
@@ -59,14 +66,18 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
     };
   }, []);
 
-  const handleSearchExecute = (data: Record<string, any>) => {
-    const results = patientRepository.searchPatients({
-      lastName: data.last_name,
-      dateOfBirth: data.date_of_birth,
-      nhsNumber: data['nhs-number'],
-    });
-    setSearchResults(results);
-    setHasSearched(true);
+  const handleSearchExecute = async (data: Record<string, any>) => {
+    try {
+      const results = await patientRepository.searchPatients({
+        lastName: data.last_name,
+        dateOfBirth: data.date_of_birth,
+        nhsNumber: data['nhs-number'],
+      });
+      setSearchResults(results);
+      setHasSearched(true);
+    } catch (e) {
+      console.error('Search failed:', e);
+    }
   };
 
   const handleSearchClick = () => {
@@ -77,13 +88,17 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
     }
   };
 
-  const handleClearClick = () => {
+  const handleClearClick = async () => {
     if (surveyModel) {
       surveyModel.clear(false, true);
     }
-    const all = patientRepository.getAllPatients();
-    setSearchResults(all);
-    setHasSearched(true);
+    try {
+      const all = await patientRepository.getAllPatients();
+      setSearchResults(all);
+      setHasSearched(true);
+    } catch (e) {
+      console.error('Failed to reload patients:', e);
+    }
   };
 
   return (

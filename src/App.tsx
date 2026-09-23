@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header, NavTab } from './components/layout/Header';
 import { RegisterPatientPage } from './pages/RegisterPatientPage';
 import { ManagePatientsPage } from './pages/ManagePatientsPage';
@@ -16,6 +16,18 @@ export default function App() {
   const [selectedPatientId, setSelectedPatientId] = useState<string>('p-emma-thompson');
   const [builderFormId, setBuilderFormId] = useState<FormId | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [allPatients, setAllPatients] = useState<Patient[]>([]);
+
+  useEffect(() => {
+    const load = () => {
+      patientRepository
+        .getAllPatients()
+        .then(setAllPatients)
+        .catch((e) => console.error('Failed to load patients:', e));
+    };
+    load();
+    return patientRepository.subscribe(load);
+  }, []);
 
   const showToast = (type: 'success' | 'error' | 'info', title: string, message?: string) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
@@ -129,7 +141,7 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {patientRepository.getAllPatients().flatMap((p) =>
+                    {allPatients.flatMap((p) =>
                       (p.prescriptions || []).map((rx) => (
                         <tr key={rx.id} className="hover:bg-gray-50/60 transition-colors">
                           <td className="px-6 py-4 font-semibold text-gray-900">
@@ -275,17 +287,21 @@ export default function App() {
                 <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-3">
                   <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    Demo State & Local Persistence
+                    Demo State & Data Persistence
                   </h2>
                   <p className="text-xs text-gray-500 leading-relaxed">
-                    Patient records, visits, prescriptions, and customized SurveyJS schemas persist in your browser's local storage.
+                    Patient records, visits, prescriptions, and customized SurveyJS schemas persist in a SQLite database on the server.
                   </p>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       if (confirm('Reset demo data to initial Emma Thompson records?')) {
-                        patientRepository.resetToInitial();
-                        FORM_METADATA_LIST.forEach((f) => formRepository.resetForm(f.id));
+                        try {
+                          await patientRepository.resetToInitial();
+                          await Promise.all(FORM_METADATA_LIST.map((f) => formRepository.resetForm(f.id)));
+                        } catch (e) {
+                          console.error('Failed to reset demo data:', e);
+                        }
                         setSelectedPatientId('p-emma-thompson');
                         showToast('info', 'Demo Data Reset', 'Initial sample patient records and default SurveyJS forms restored.');
                       }

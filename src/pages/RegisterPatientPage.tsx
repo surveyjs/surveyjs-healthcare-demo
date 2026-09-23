@@ -32,9 +32,9 @@ export const RegisterPatientPage: React.FC<RegisterPatientPageProps> = ({
 
   const schema = formRepository.getForm('patient-registration');
 
-  const handleComplete = (data: Record<string, any>) => {
+  const handleComplete = async (data: Record<string, any>) => {
     try {
-      const newPatient = patientRepository.createPatientFromSurvey(data);
+      const newPatient = await patientRepository.createPatientFromSurvey(data);
       onPatientCreated(newPatient);
     } catch (e) {
       console.error('Failed to create patient:', e);

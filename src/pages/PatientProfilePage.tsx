@@ -28,21 +28,33 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
 
-  // Load patient
+  // Load patient from the database
   useEffect(() => {
-    const loaded = patientRepository.getPatientById(patientId);
-    if (loaded) {
-      setPatient(loaded);
-    }
+    let cancelled = false;
+    patientRepository
+      .getPatientById(patientId)
+      .then((loaded) => {
+        if (!cancelled && loaded) {
+          setPatient(loaded);
+        }
+      })
+      .catch((e) => console.error('Failed to load patient:', e));
+    return () => {
+      cancelled = true;
+    };
   }, [patientId]);
 
   // Subscribe to changes in patientRepository
   useEffect(() => {
     const unsubscribe = patientRepository.subscribe(() => {
-      const updated = patientRepository.getPatientById(patientId);
-      if (updated) {
-        setPatient(updated);
-      }
+      patientRepository
+        .getPatientById(patientId)
+        .then((updated) => {
+          if (updated) {
+            setPatient(updated);
+          }
+        })
+        .catch((e) => console.error('Failed to reload patient:', e));
     });
     return unsubscribe;
   }, [patientId]);

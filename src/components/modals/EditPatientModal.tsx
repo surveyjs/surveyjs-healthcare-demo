@@ -39,9 +39,9 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
   const schema = formRepository.getForm('edit-patient');
   const initialData = patientRepository.mapPatientToSurveyData(patient);
 
-  const handleComplete = (data: Record<string, any>) => {
+  const handleComplete = async (data: Record<string, any>) => {
     try {
-      const updated = patientRepository.updatePatientFromSurvey(patient.id, data);
+      const updated = await patientRepository.updatePatientFromSurvey(patient.id, data);
       onSaved(updated);
       onClose();
     } catch (e) {

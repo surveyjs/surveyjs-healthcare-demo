@@ -7,8 +7,6 @@ import patientVisitsSchema from '../survey/schemas/patient-visits.json';
 import prescribedMedicationSchema from '../survey/schemas/prescribed-medication.json';
 import { FormId, FormMetadata } from '../types/forms';
 
-const STORAGE_PREFIX = 'surveyjs_schema_';
-
 const DEFAULT_SCHEMAS: Record<FormId, object> = {
   'patient-registration': patientRegistrationSchema,
   'patient-search': patientSearchSchema,
@@ -67,34 +65,52 @@ export const FORM_METADATA_LIST: FormMetadata[] = [
 type SchemaChangeListener = (formId: FormId, newSchema: object) => void;
 const listeners: Set<SchemaChangeListener> = new Set();
 
+// Customized schemas loaded from the database; defaults come from the bundled JSON files
+let overrides: Record<string, object> = {};
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `API request failed: ${res.status} ${path}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 export const formRepository = {
-  getForm(formId: FormId): object {
+  /** Loads customized form schemas from the database into the in-memory cache. Call once at startup. */
+  async init(): Promise<void> {
     try {
-      const stored = localStorage.getItem(STORAGE_PREFIX + formId);
-      if (stored) {
-        return JSON.parse(stored);
-      }
+      overrides = await request<Record<string, object>>('/forms');
     } catch (e) {
-      console.warn(`Failed to read stored form schema for ${formId}:`, e);
+      console.error('Failed to load form schemas from the database:', e);
+      overrides = {};
     }
-    return DEFAULT_SCHEMAS[formId] || {};
   },
 
-  saveForm(formId: FormId, schema: object): void {
-    try {
-      localStorage.setItem(STORAGE_PREFIX + formId, JSON.stringify(schema));
-    } catch (e) {
-      console.error(`Failed to persist schema for ${formId}:`, e);
-    }
+  getForm(formId: FormId): object {
+    return overrides[formId] || DEFAULT_SCHEMAS[formId] || {};
+  },
+
+  async saveForm(formId: FormId, schema: object): Promise<void> {
+    await request(`/forms/${encodeURIComponent(formId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(schema),
+    });
+    overrides[formId] = schema;
     listeners.forEach((listener) => listener(formId, schema));
   },
 
-  resetForm(formId: FormId): object {
+  async resetForm(formId: FormId): Promise<object> {
     try {
-      localStorage.removeItem(STORAGE_PREFIX + formId);
+      await request(`/forms/${encodeURIComponent(formId)}`, { method: 'DELETE' });
     } catch (e) {
       console.warn(`Failed to reset schema for ${formId}:`, e);
     }
+    delete overrides[formId];
     const defaultSchema = DEFAULT_SCHEMAS[formId] || {};
     listeners.forEach((listener) => listener(formId, defaultSchema));
     return defaultSchema;

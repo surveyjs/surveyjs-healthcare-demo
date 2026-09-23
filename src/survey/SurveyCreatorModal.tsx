@@ -39,11 +39,18 @@ export const SurveyCreatorModal: React.FC<SurveyCreatorModalProps> = ({
     inst.theme = DefaultLightPanelless;
 
     inst.saveSurveyFunc = (saveNo: number, callback: (no: number, isSuccess: boolean) => void) => {
-      formRepository.saveForm(formId, inst.JSON);
-      callback(saveNo, true);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-      if (onSaved) onSaved(formId);
+      formRepository
+        .saveForm(formId, inst.JSON)
+        .then(() => {
+          callback(saveNo, true);
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 3000);
+          if (onSaved) onSaved(formId);
+        })
+        .catch((e) => {
+          console.error('Failed to save form schema:', e);
+          callback(saveNo, false);
+        });
     };
 
     return inst;
@@ -51,16 +58,20 @@ export const SurveyCreatorModal: React.FC<SurveyCreatorModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleManualSave = () => {
-    formRepository.saveForm(formId, creator.JSON);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
-    if (onSaved) onSaved(formId);
+  const handleManualSave = async () => {
+    try {
+      await formRepository.saveForm(formId, creator.JSON);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      if (onSaved) onSaved(formId);
+    } catch (e) {
+      console.error('Failed to save form schema:', e);
+    }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (confirm('Are you sure you want to reset this form to its default schema? All custom changes will be discarded.')) {
-      const defaultSchema = formRepository.resetForm(formId);
+      const defaultSchema = await formRepository.resetForm(formId);
       creator.JSON = defaultSchema;
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
