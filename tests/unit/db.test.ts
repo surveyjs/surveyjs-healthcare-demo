@@ -128,8 +128,12 @@ describe('healthcare SQLite db', () => {
 
   it('searches by last name (case-insensitive, partial)', () => {
     const results = db.listPatients({ lastName: 'thomp' });
-    expect(results).toHaveLength(1);
-    expect(results[0].id).toBe('p-emma-thompson');
+    expect(results).toHaveLength(3);
+    expect(results.map((p) => p.id)).toEqual([
+      'p-emma-thompson',
+      'p-oliver-thompson',
+      'p-grace-thompson',
+    ]);
   });
 
   it('searches by NHS number ignoring whitespace', () => {

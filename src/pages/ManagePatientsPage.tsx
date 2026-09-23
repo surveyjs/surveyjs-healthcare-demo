@@ -57,12 +57,10 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
 
   const schema = formRepository.getForm('patient-search');
 
-  // Initial data for search form matching screenshot
+  // Prefill with a surname shared by several seeded patients so the default search returns results
   const initialData = useMemo(() => {
     return {
       last_name: 'Thompson',
-      date_of_birth: '1985-03-14',
-      'nhs-number': '945 128 4567',
     };
   }, []);
 
@@ -82,9 +80,9 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
 
   const handleSearchClick = () => {
     if (surveyModel) {
-      // Validate or get current data
-      const data = surveyModel.data || {};
-      handleSearchExecute(data);
+      // Enforce required fields (last name) before searching
+      if (!surveyModel.validate()) return;
+      handleSearchExecute(surveyModel.data || {});
     }
   };
 

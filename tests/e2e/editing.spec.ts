@@ -21,10 +21,12 @@ test('search form filters the patient list via the database', async ({ page }) =
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'David Miller' })).toBeVisible();
 
-  // The search form is prefilled with Emma Thompson's details
+  // The search form is prefilled with the surname "Thompson", shared by several seeded patients
   await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Oliver Thompson' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Grace Thompson' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'David Miller' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Clear' }).click();

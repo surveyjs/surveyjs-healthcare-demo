@@ -3,7 +3,7 @@
   "pages": [
     {
       "name": "search_for_patient",
-      "description": "Enter the patient’s last name and either their date of birth or NHS number.",
+      "description": "Enter the patient’s last name. Date of birth and NHS number are optional filters.",
       "elements": [
         {
           "type": "text",
@@ -17,12 +17,6 @@
           "name": "date_of_birth",
           "startWithNewLine": false,
           "title": "Date of Birth",
-          "requiredIf": "{nhs-number} empty",
-          "validators": [
-            {
-              "type": "expression"
-            }
-          ],
           "inputType": "date",
           "autocomplete": "bday"
         },
@@ -31,7 +25,6 @@
           "name": "nhs-number",
           "startWithNewLine": false,
           "title": "NHS Number",
-          "requiredIf": "{date_of_birth} empty",
           "autocomplete": "bday",
           "maskType": "pattern",
           "maskSettings": {
