@@ -14,7 +14,7 @@ async function openEmmaProfile(page: Page) {
     .getByRole('button', { name: 'Open Profile' })
     .first()
     .click();
-  await expect(page.getByRole('button', { name: 'Edit Patient' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit Patient', exact: true })).toBeVisible();
 }
 
 test('search form filters the patient list via the database', async ({ page }) => {
@@ -74,7 +74,7 @@ test('registering a patient via the SurveyJS form persists it to SQLite', async 
 test('editing a patient via the SurveyJS modal saves changes to SQLite', async ({ page }) => {
   await openEmmaProfile(page);
 
-  await page.getByRole('button', { name: 'Edit Patient' }).click();
+  await page.getByRole('button', { name: 'Edit Patient', exact: true }).click();
   const townInput = page.getByRole('textbox', { name: 'Town or city' });
   await expect(townInput).toHaveValue('Bristol');
   await townInput.fill('Manchester');
@@ -84,7 +84,7 @@ test('editing a patient via the SurveyJS modal saves changes to SQLite', async (
 
   // Reload and verify persistence via the prefilled edit form
   await openEmmaProfile(page);
-  await page.getByRole('button', { name: 'Edit Patient' }).click();
+  await page.getByRole('button', { name: 'Edit Patient', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Town or city' })).toHaveValue('Manchester');
 });
 

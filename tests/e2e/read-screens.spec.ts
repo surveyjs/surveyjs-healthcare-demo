@@ -39,7 +39,7 @@ test('medications registry iterates prescriptions of all patients from the datab
   await page.goto('/');
   await page.getByRole('button', { name: 'Medications' }).click();
 
-  await expect(page.getByText('Practice Prescription Registry')).toBeVisible();
+  await expect(page.getByText('Practice Medication Overview')).toBeVisible();
   await expect(page.getByRole('cell', { name: /Amlodipine 5mg Tablets/ })).toBeVisible();
   await expect(page.getByRole('cell', { name: /Ibuprofen 200mg Tablets/ })).toBeVisible();
   await expect(page.getByRole('cell', { name: /Salbutamol 100mcg Inhaler/ })).toBeVisible();

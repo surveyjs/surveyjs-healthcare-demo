@@ -90,7 +90,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
                 className="inline-flex items-center gap-1.5 text-xs text-[#00695c] hover:underline"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>Customize Edit Patient Form in Builder</span>
+                <span>Customize Edit Patient Form</span>
               </button>
             </div>
           )}

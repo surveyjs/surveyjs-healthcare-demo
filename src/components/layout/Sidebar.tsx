@@ -73,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="w-full inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:border-[#00695c] hover:text-[#00695c] hover:bg-teal-50/50 transition-colors text-left"
               >
                 <Settings className="w-3.5 h-3.5 text-[#00695c] shrink-0" />
-                <span>Customize Patient Form</span>
+                <span>Edit Patient Form</span>
               </button>
 
               <button
@@ -82,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="w-full inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:border-[#00695c] hover:text-[#00695c] hover:bg-teal-50/50 transition-colors text-left"
               >
                 <Settings className="w-3.5 h-3.5 text-[#00695c] shrink-0" />
-                <span>Customize Visit Form</span>
+                <span>Edit Patient Visit Form</span>
               </button>
 
               <button
@@ -91,7 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="w-full inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:border-[#00695c] hover:text-[#00695c] hover:bg-teal-50/50 transition-colors text-left"
               >
                 <Settings className="w-3.5 h-3.5 text-[#00695c] shrink-0" />
-                <span>Create New Intake Form</span>
+                <span>Edit Patient Registration Form</span>
               </button>
             </div>
           </div>

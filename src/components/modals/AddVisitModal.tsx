@@ -99,7 +99,7 @@ export const AddVisitModal: React.FC<AddVisitModalProps> = ({
                 className="inline-flex items-center gap-1.5 text-xs text-[#00695c] hover:underline cursor-pointer font-medium"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>Customize Visit Form in Builder</span>
+                <span>Customize Patient Visit Form</span>
               </button>
             </div>
           )}

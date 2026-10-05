@@ -164,10 +164,10 @@ export default function App() {
               <div>
                 <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <Pill className="w-5 h-5 text-[#00695c]" />
-                  Practice Prescription Registry
+                  Practice Medication Overview
                 </h1>
                 <p className="text-sm text-gray-500">
-                  Comprehensive audit of active and completed medication courses across all registered patients.
+                  View active and past medication records across all registered patients.
                 </p>
               </div>
 
@@ -177,7 +177,7 @@ export default function App() {
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#00695c] bg-teal-50/70 border border-teal-200 rounded-md hover:bg-teal-100/70 transition-colors"
               >
                 <Settings className="w-4 h-4 text-[#00695c]" />
-                <span>Customize Prescription Schema</span>
+                <span>Customize Medication Prescription Form</span>
               </button>
             </div>
 

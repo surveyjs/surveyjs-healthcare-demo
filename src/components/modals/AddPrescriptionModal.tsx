@@ -98,7 +98,7 @@ export const AddPrescriptionModal: React.FC<AddPrescriptionModalProps> = ({
                 className="inline-flex items-center gap-1.5 text-xs text-[#00695c] hover:underline cursor-pointer font-medium"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>Customize Prescription Form in Builder</span>
+                <span>Customize Medication Prescription Form</span>
               </button>
             </div>
           )}

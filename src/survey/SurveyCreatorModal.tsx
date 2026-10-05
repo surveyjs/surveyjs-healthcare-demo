@@ -117,7 +117,7 @@ export const SurveyCreatorModal: React.FC<SurveyCreatorModalProps> = ({
               title="Reset schema to original default"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Reset Default
+              Reset to Default
             </button>
 
             <button
