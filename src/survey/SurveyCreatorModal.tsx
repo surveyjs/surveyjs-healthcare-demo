@@ -13,6 +13,8 @@ interface SurveyCreatorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved?: (formId: FormId) => void;
+  /** Called after "Save & Apply Form" persists the schema; the parent closes the creator and restores the originating view. */
+  onApplied?: (formId: FormId) => void;
 }
 
 export const SurveyCreatorModal: React.FC<SurveyCreatorModalProps> = ({
@@ -20,6 +22,7 @@ export const SurveyCreatorModal: React.FC<SurveyCreatorModalProps> = ({
   isOpen,
   onClose,
   onSaved,
+  onApplied,
 }) => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const metadata = formRepository.getMetadata(formId);
@@ -30,7 +33,7 @@ export const SurveyCreatorModal: React.FC<SurveyCreatorModalProps> = ({
       showJSONEditorTab: true,
       showTranslationTab: false,
       showEmbededSurveyTab: false,
-      isAutoSave: true,
+      autoSaveEnabled: true,
     };
 
     const inst = new SurveyCreator(options);
@@ -61,9 +64,12 @@ export const SurveyCreatorModal: React.FC<SurveyCreatorModalProps> = ({
   const handleManualSave = async () => {
     try {
       await formRepository.saveForm(formId, creator.JSON);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
       if (onSaved) onSaved(formId);
+      if (onApplied) {
+        onApplied(formId);
+      } else {
+        onClose();
+      }
     } catch (e) {
       console.error('Failed to save form schema:', e);
     }

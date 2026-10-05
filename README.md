@@ -51,7 +51,7 @@ The integration follows the standard SurveyJS React setup, wrapped in two reusab
    - places validation errors below the inputs (`questionErrorLocation: "bottom"`) for every rendered form,
    - applies `initialData` for edit workflows and supports `readOnly` (display mode),
    - exposes `onComplete` / `onValueChanged` callbacks that hand `survey.data` back to the host, and `onModelReady` for advanced cases (e.g. the login page cancelling `onCompleting`).
-3. **[SurveyCreatorModal.tsx](src/survey/SurveyCreatorModal.tsx)** — embeds the Survey Creator in a modal. It loads the same JSON the Form Library renders; saving persists the edited schema through `formRepository`, closing the round-trip:
+3. **[SurveyCreatorModal.tsx](src/survey/SurveyCreatorModal.tsx)** — embeds the Survey Creator in a modal. It loads the same JSON the Form Library renders; saving persists the edited schema through `formRepository`, closing the round-trip. **Save & Apply Form** persists the schema, closes the creator, and returns to the view the builder was opened from (if it was opened from inside a modal form, that modal reopens with the updated schema):
 
 ```text
 SurveyJS JSON → Survey Creator → edited JSON → Form Library → application form

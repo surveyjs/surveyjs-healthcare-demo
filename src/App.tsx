@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header, NavTab } from './components/layout/Header';
 import { RegisterPatientPage } from './pages/RegisterPatientPage';
 import { ManagePatientsPage } from './pages/ManagePatientsPage';
@@ -19,6 +19,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('manage');
   const [selectedPatientId, setSelectedPatientId] = useState<string>('p-emma-thompson');
   const [builderFormId, setBuilderFormId] = useState<FormId | null>(null);
+  // Restores the view (e.g. reopens a modal) the form builder was opened from after "Save & Apply Form"
+  const builderReturnRef = useRef<(() => void) | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [allPatients, setAllPatients] = useState<Patient[]>([]);
 
@@ -62,7 +64,8 @@ export default function App() {
     setActiveTab('profile');
   };
 
-  const handleOpenFormBuilder = (formId: FormId) => {
+  const handleOpenFormBuilder = (formId: FormId, onReturn?: () => void) => {
+    builderReturnRef.current = onReturn ?? null;
     setBuilderFormId(formId);
   };
 
@@ -376,7 +379,16 @@ export default function App() {
         <SurveyCreatorModal
           formId={builderFormId}
           isOpen={true}
-          onClose={() => setBuilderFormId(null)}
+          onClose={() => {
+            builderReturnRef.current = null;
+            setBuilderFormId(null);
+          }}
+          onApplied={() => {
+            setBuilderFormId(null);
+            const restoreView = builderReturnRef.current;
+            builderReturnRef.current = null;
+            restoreView?.();
+          }}
           onSaved={(formId) => {
             showToast(
               'success',

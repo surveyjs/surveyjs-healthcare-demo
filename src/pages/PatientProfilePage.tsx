@@ -15,7 +15,8 @@ interface PatientProfilePageProps {
   /** 'patient' hides staff-only actions (form builder, prescriptions) and enables visit revocation. */
   viewerRole?: 'doctor' | 'patient';
   onBackToSearch?: () => void;
-  onOpenFormBuilder?: (formId: FormId) => void;
+  /** onReturn restores the originating view (reopens the modal) after the builder's "Save & Apply Form". */
+  onOpenFormBuilder?: (formId: FormId, onReturn?: () => void) => void;
   showToast: (type: 'success' | 'error' | 'info', title: string, message?: string) => void;
 }
 
@@ -136,7 +137,7 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
           onOpenFormBuilder
             ? (formId) => {
                 setIsEditModalOpen(false);
-                onOpenFormBuilder(formId);
+                onOpenFormBuilder(formId, () => setIsEditModalOpen(true));
               }
             : undefined
         }
@@ -155,7 +156,7 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
           onOpenFormBuilder
             ? (formId) => {
                 setIsVisitModalOpen(false);
-                onOpenFormBuilder(formId);
+                onOpenFormBuilder(formId, () => setIsVisitModalOpen(true));
               }
             : undefined
         }
@@ -174,7 +175,7 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
           onOpenFormBuilder
             ? (formId) => {
                 setIsPrescriptionModalOpen(false);
-                onOpenFormBuilder(formId);
+                onOpenFormBuilder(formId, () => setIsPrescriptionModalOpen(true));
               }
             : undefined
         }
