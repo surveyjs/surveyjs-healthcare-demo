@@ -15,7 +15,7 @@ The application implements a realistic clinical workflow, split by user role:
 ### Doctor / staff use cases
 
 - **Patient registration** — multi-section SurveyJS form capturing demographics, address, and emergency contact
-- **Patient search & management** — filter patients by surname (required), birth date, or NHS number using a SurveyJS-driven search form. The form is prefilled with the surname "Thompson", which several seeded patients share, so the default search demonstrates multi-result matching
+- **Patient search & management** — filter patients by surname, birth date, or NHS number using a SurveyJS-driven search form. All filters are optional; an empty search lists every patient. Several seeded patients share the surname "Thompson", so searching for it demonstrates multi-result matching
 - **Patient profile** — basic details, contact details, visit history, and prescribed medications
 - **Edit patient / Add visit / Add prescription** — modal workflows powered by the corresponding SurveyJS forms, with validation and immediate profile updates. Modal forms render single-column, all date fields use native date pickers (the visit date defaults to today and stays editable), and validation errors appear below the inputs
 - **Form builder** — open any application form in the embedded Survey Creator, modify it (add/remove/reorder questions, edit choices, validation, visibility logic), save the JSON, and see the updated form rendered in the app immediately

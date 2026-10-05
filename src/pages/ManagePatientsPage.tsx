@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../components/layout/Sidebar';
 import { PatientCard } from '../components/patients/PatientCard';
 import { SurveyRenderer } from '../survey/SurveyRenderer';
@@ -57,13 +57,6 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
 
   const schema = formRepository.getForm('patient-search');
 
-  // Prefill with a surname shared by several seeded patients so the default search returns results
-  const initialData = useMemo(() => {
-    return {
-      last_name: 'Thompson',
-    };
-  }, []);
-
   const handleSearchExecute = async (data: Record<string, any>) => {
     try {
       const results = await patientRepository.searchPatients({
@@ -80,15 +73,14 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
 
   const handleSearchClick = () => {
     if (surveyModel) {
-      // Enforce required fields (last name) before searching
-      if (!surveyModel.validate()) return;
       handleSearchExecute(surveyModel.data || {});
     }
   };
 
   const handleClearClick = async () => {
     if (surveyModel) {
-      surveyModel.clear(false, true);
+      // clear(true) empties the fields; clear(false) would only reset the survey state
+      surveyModel.clear(true, true);
     }
     try {
       const all = await patientRepository.getAllPatients();
@@ -118,7 +110,6 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
               <SurveyRenderer
                 key={`search-${schemaVersion}`}
                 schema={schema}
-                initialData={initialData}
                 onComplete={handleSearchExecute}
                 showNavigationButtons={false}
                 onModelReady={(model) => setSurveyModel(model)}

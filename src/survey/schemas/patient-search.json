@@ -3,13 +3,12 @@
   "pages": [
     {
       "name": "search_for_patient",
-      "description": "Enter the patient’s last name. Date of birth and NHS number are optional filters.",
+      "description": "Filter patients by last name, date of birth, or NHS number. All fields are optional.",
       "elements": [
         {
           "type": "text",
           "name": "last_name",
           "title": "Last Name",
-          "isRequired": true,
           "autocomplete": "family-name"
         },
         {

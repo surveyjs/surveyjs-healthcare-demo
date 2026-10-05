@@ -21,7 +21,9 @@ test('search form filters the patient list via the database', async ({ page }) =
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'David Miller' })).toBeVisible();
 
-  // The search form is prefilled with the surname "Thompson", shared by several seeded patients
+  // "Thompson" is shared by several seeded patients
+  const lastName = page.getByRole('textbox', { name: 'Last Name' });
+  await lastName.fill('Thompson');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
@@ -29,9 +31,27 @@ test('search form filters the patient list via the database', async ({ page }) =
   await expect(page.getByRole('heading', { name: 'Grace Thompson' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'David Miller' })).toHaveCount(0);
 
+  // Searching must not clear the entered criteria
+  await expect(lastName).toHaveValue('Thompson');
+
   await page.getByRole('button', { name: 'Clear' }).click();
+  await expect(lastName).toHaveValue('');
   await expect(page.getByRole('heading', { name: 'David Miller' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Sophie Bennett' })).toBeVisible();
+});
+
+test('reset filters restores the full patient list after a no-match search', async ({ page }) => {
+  await page.goto('/');
+  const lastName = page.getByRole('textbox', { name: 'Last Name' });
+  await lastName.fill('Zzyzx');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+
+  await expect(page.getByText('No patients matched your search')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Reset filters to view all patients' }).click();
+  await expect(lastName).toHaveValue('');
+  await expect(page.getByRole('heading', { name: 'David Miller' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
 });
 
 test('registering a patient via the SurveyJS form persists it to SQLite', async ({ page }) => {
