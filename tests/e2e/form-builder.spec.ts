@@ -30,7 +30,7 @@ test('a customized schema stored in SQLite is rendered instead of the default', 
 
 test('saving a form in the Survey Creator persists the schema to SQLite', async ({ page, request }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Inpatient Settings' }).click();
+  await page.getByRole('link', { name: 'Inpatient Settings' }).click();
 
   // Open the builder for the first form (Patient Registration)
   await page.getByRole('button', { name: 'Edit in Builder' }).first().click();

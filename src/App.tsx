@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Header, NavTab } from './components/layout/Header';
 import { RegisterPatientPage } from './pages/RegisterPatientPage';
 import { ManagePatientsPage } from './pages/ManagePatientsPage';
@@ -14,10 +15,41 @@ import { authRepository } from './repositories/authRepository';
 import { formRepository, FORM_METADATA_LIST } from './repositories/formRepository';
 import { Pill, ShieldCheck, Settings, Users, Sparkles, Building2 } from 'lucide-react';
 
+type ShowToast = (type: 'success' | 'error' | 'info', title: string, message?: string) => void;
+
+/** Staff patient profile at /patients/:patientId. */
+function PatientProfileRoute({
+  onOpenFormBuilder,
+  showToast,
+}: {
+  onOpenFormBuilder: (formId: FormId, onReturn?: () => void) => void;
+  showToast: ShowToast;
+}) {
+  const { patientId } = useParams<{ patientId: string }>();
+  const navigate = useNavigate();
+  return (
+    <PatientProfilePage
+      patientId={patientId!}
+      onBackToSearch={() => navigate('/manage')}
+      onOpenFormBuilder={onOpenFormBuilder}
+      showToast={showToast}
+    />
+  );
+}
+
+/** Maps the current URL to the highlighted header tab. */
+function tabForPath(pathname: string): NavTab {
+  if (pathname.startsWith('/register')) return 'register';
+  if (pathname.startsWith('/patients')) return 'profile';
+  if (pathname.startsWith('/medications')) return 'medications';
+  if (pathname.startsWith('/settings')) return 'settings';
+  return 'manage';
+}
+
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authRepository.getStoredUser());
-  const [activeTab, setActiveTab] = useState<NavTab>('manage');
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('p-emma-thompson');
   const [builderFormId, setBuilderFormId] = useState<FormId | null>(null);
   // Restores the view (e.g. reopens a modal) the form builder was opened from after "Save & Apply Form"
   const builderReturnRef = useRef<(() => void) | null>(null);
@@ -50,8 +82,7 @@ export default function App() {
   };
 
   const handlePatientCreated = (newPatient: Patient) => {
-    setSelectedPatientId(newPatient.id);
-    setActiveTab('profile');
+    navigate(`/patients/${newPatient.id}`);
     showToast(
       'success',
       'Patient Registered',
@@ -60,8 +91,7 @@ export default function App() {
   };
 
   const handleOpenProfile = (patientId: string) => {
-    setSelectedPatientId(patientId);
-    setActiveTab('profile');
+    navigate(`/patients/${patientId}`);
   };
 
   const handleOpenFormBuilder = (formId: FormId, onReturn?: () => void) => {
@@ -72,18 +102,21 @@ export default function App() {
   const handleLogout = () => {
     authRepository.clearStoredUser();
     setCurrentUser(null);
-    setActiveTab('manage');
   };
 
   const handleLogin = (user: AuthUser) => {
     setCurrentUser(user);
     showToast('success', 'Signed In', `Welcome, ${user.fullName}.`);
+    navigate(user.role === 'patient' ? '/my-profile' : '/manage', { replace: true });
   };
 
   if (!currentUser) {
     return (
       <>
-        <LoginPage onLogin={handleLogin} />
+        <Routes>
+          <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       </>
     );
@@ -97,22 +130,29 @@ export default function App() {
           activeTab="profile"
           role="patient"
           userName={currentUser.fullName}
-          onTabChange={() => {}}
           onLogout={handleLogout}
         />
 
         <main className="flex-1">
-          {currentUser.patientId ? (
-            <PatientProfilePage
-              patientId={currentUser.patientId}
-              viewerRole="patient"
-              showToast={showToast}
+          <Routes>
+            <Route
+              path="/my-profile"
+              element={
+                currentUser.patientId ? (
+                  <PatientProfilePage
+                    patientId={currentUser.patientId}
+                    viewerRole="patient"
+                    showToast={showToast}
+                  />
+                ) : (
+                  <div className="max-w-7xl mx-auto px-4 py-12 text-center text-gray-500">
+                    No patient record is linked to your account. Please contact the practice.
+                  </div>
+                )
+              }
             />
-          ) : (
-            <div className="max-w-7xl mx-auto px-4 py-12 text-center text-gray-500">
-              No patient record is linked to your account. Please contact the practice.
-            </div>
-          )}
+            <Route path="*" element={<Navigate to="/my-profile" replace />} />
+          </Routes>
         </main>
 
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -120,48 +160,9 @@ export default function App() {
     );
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-[#f8fafc] text-gray-800 antialiased selection:bg-teal-100 selection:text-teal-900">
-      {/* Top Application Navigation Bar matching screenshot */}
-      <Header
-        activeTab={activeTab}
-        userName={currentUser.fullName}
-        onTabChange={(tab) => {
-          if (tab === 'profile') {
-            setActiveTab('manage');
-          } else {
-            setActiveTab(tab);
-          }
-        }}
-        onLogout={handleLogout}
-      />
+  const activeTab = tabForPath(location.pathname);
 
-      {/* Main View Area */}
-      <main className="flex-1">
-        {activeTab === 'register' && (
-          <RegisterPatientPage
-            onPatientCreated={handlePatientCreated}
-            onOpenFormBuilder={handleOpenFormBuilder}
-          />
-        )}
-
-        {activeTab === 'manage' && (
-          <ManagePatientsPage
-            onOpenProfile={handleOpenProfile}
-            onOpenFormBuilder={handleOpenFormBuilder}
-          />
-        )}
-
-        {activeTab === 'profile' && (
-          <PatientProfilePage
-            patientId={selectedPatientId}
-            onBackToSearch={() => setActiveTab('manage')}
-            onOpenFormBuilder={handleOpenFormBuilder}
-            showToast={showToast}
-          />
-        )}
-
-        {activeTab === 'medications' && (
+  const medicationsView = (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -240,9 +241,9 @@ export default function App() {
               </div>
             </div>
           </div>
-        )}
+  );
 
-        {activeTab === 'settings' && (
+  const settingsView = (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs">
               <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -359,7 +360,6 @@ export default function App() {
                         } catch (e) {
                           console.error('Failed to reset demo data:', e);
                         }
-                        setSelectedPatientId('p-emma-thompson');
                         showToast('info', 'Demo Data Reset', 'Initial sample patient records and default SurveyJS forms restored.');
                       }
                     }}
@@ -371,7 +371,44 @@ export default function App() {
               </div>
             </div>
           </div>
-        )}
+  );
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#f8fafc] text-gray-800 antialiased selection:bg-teal-100 selection:text-teal-900">
+      {/* Top Application Navigation Bar matching screenshot */}
+      <Header activeTab={activeTab} userName={currentUser.fullName} onLogout={handleLogout} />
+
+      {/* Main View Area */}
+      <main className="flex-1">
+        <Routes>
+          <Route
+            path="/register"
+            element={
+              <RegisterPatientPage
+                onPatientCreated={handlePatientCreated}
+                onOpenFormBuilder={handleOpenFormBuilder}
+              />
+            }
+          />
+          <Route
+            path="/manage"
+            element={
+              <ManagePatientsPage
+                onOpenProfile={handleOpenProfile}
+                onOpenFormBuilder={handleOpenFormBuilder}
+              />
+            }
+          />
+          <Route
+            path="/patients/:patientId"
+            element={
+              <PatientProfileRoute onOpenFormBuilder={handleOpenFormBuilder} showToast={showToast} />
+            }
+          />
+          <Route path="/medications" element={medicationsView} />
+          <Route path="/settings" element={settingsView} />
+          <Route path="*" element={<Navigate to="/manage" replace />} />
+        </Routes>
       </main>
 
       {/* Embedded SurveyJS Form Builder Modal */}

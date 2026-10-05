@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { UserRole } from '../../types/auth';
 
@@ -8,11 +9,18 @@ interface HeaderProps {
   activeTab: NavTab;
   userName: string;
   role?: UserRole;
-  onTabChange: (tab: NavTab) => void;
   onLogout?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeTab, userName, role = 'doctor', onTabChange, onLogout }) => {
+const ACTIVE_CLASSES =
+  'text-[#00695c] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#00695c]';
+
+const navLinkClass = (isActive: boolean, inactiveClasses: string) =>
+  `text-sm font-medium transition-colors cursor-pointer relative py-4 ${
+    isActive ? ACTIVE_CLASSES : inactiveClasses
+  }`;
+
+export const Header: React.FC<HeaderProps> = ({ activeTab, userName, role = 'doctor', onLogout }) => {
   return (
     <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
@@ -38,62 +46,44 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, userName, role = 'doc
           {/* Navigation items */}
           <nav className="flex items-center space-x-6">
             {role === 'patient' ? (
-              <button
-                type="button"
-                onClick={() => onTabChange('profile')}
+              <Link
+                to="/my-profile"
                 className="text-sm font-semibold text-[#00695c] transition-colors cursor-pointer relative py-4 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#00695c]"
               >
                 My Profile
-              </button>
+              </Link>
             ) : (
               <>
-            <button
-              type="button"
-              onClick={() => onTabChange('register')}
-              className={`text-sm font-medium transition-colors cursor-pointer relative py-4 ${
-                activeTab === 'register'
-                  ? 'text-[#00695c] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#00695c]'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Register Patient
-            </button>
+                <Link
+                  to="/register"
+                  className={navLinkClass(activeTab === 'register', 'text-gray-600 hover:text-gray-900')}
+                >
+                  Register Patient
+                </Link>
 
-            <button
-              type="button"
-              onClick={() => onTabChange('manage')}
-              className={`text-sm font-medium transition-colors cursor-pointer relative py-4 ${
-                activeTab === 'manage' || activeTab === 'profile'
-                  ? 'text-[#00695c] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#00695c]'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Manage Patients
-            </button>
+                <Link
+                  to="/manage"
+                  className={navLinkClass(
+                    activeTab === 'manage' || activeTab === 'profile',
+                    'text-gray-600 hover:text-gray-900',
+                  )}
+                >
+                  Manage Patients
+                </Link>
 
-            <button
-              type="button"
-              onClick={() => onTabChange('medications')}
-              className={`text-sm font-medium transition-colors cursor-pointer relative py-4 ${
-                activeTab === 'medications'
-                  ? 'text-[#00695c] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#00695c]'
-                  : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              Medications
-            </button>
+                <Link
+                  to="/medications"
+                  className={navLinkClass(activeTab === 'medications', 'text-gray-400 hover:text-gray-600')}
+                >
+                  Medications
+                </Link>
 
-            <button
-              type="button"
-              onClick={() => onTabChange('settings')}
-              className={`text-sm font-medium transition-colors cursor-pointer relative py-4 ${
-                activeTab === 'settings'
-                  ? 'text-[#00695c] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#00695c]'
-                  : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              Inpatient Settings
-            </button>
+                <Link
+                  to="/settings"
+                  className={navLinkClass(activeTab === 'settings', 'text-gray-400 hover:text-gray-600')}
+                >
+                  Inpatient Settings
+                </Link>
               </>
             )}
           </nav>

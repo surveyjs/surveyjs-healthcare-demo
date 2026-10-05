@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from '../components/layout/Sidebar';
 import { PatientCard } from '../components/patients/PatientCard';
 import { SurveyRenderer } from '../survey/SurveyRenderer';
@@ -22,25 +22,31 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
   const [schemaVersion, setSchemaVersion] = useState(0);
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  // Last-write-wins: a slow earlier request (e.g. the initial load) must not overwrite newer results
+  const requestSeqRef = useRef(0);
+
+  const applyResults = async (fetcher: () => Promise<Patient[]>) => {
+    const requestId = ++requestSeqRef.current;
+    const results = await fetcher();
+    if (requestId === requestSeqRef.current) {
+      setSearchResults(results);
+      setHasSearched(true);
+    }
+  };
 
   // Initial load: show all patients from the database
   useEffect(() => {
-    patientRepository
-      .getAllPatients()
-      .then((all) => {
-        setSearchResults(all);
-        setHasSearched(true);
-      })
-      .catch((e) => console.error('Failed to load patients:', e));
+    applyResults(() => patientRepository.getAllPatients()).catch((e) =>
+      console.error('Failed to load patients:', e),
+    );
   }, []);
 
   // Subscribe to changes in patients or schema
   useEffect(() => {
     const unsubPatients = patientRepository.subscribe(() => {
-      patientRepository
-        .getAllPatients()
-        .then(setSearchResults)
-        .catch((e) => console.error('Failed to reload patients:', e));
+      applyResults(() => patientRepository.getAllPatients()).catch((e) =>
+        console.error('Failed to reload patients:', e),
+      );
     });
 
     const unsubForms = formRepository.subscribe((changedId) => {
@@ -59,13 +65,13 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
 
   const handleSearchExecute = async (data: Record<string, any>) => {
     try {
-      const results = await patientRepository.searchPatients({
-        lastName: data.last_name,
-        dateOfBirth: data.date_of_birth,
-        nhsNumber: data['nhs-number'],
-      });
-      setSearchResults(results);
-      setHasSearched(true);
+      await applyResults(() =>
+        patientRepository.searchPatients({
+          lastName: data.last_name,
+          dateOfBirth: data.date_of_birth,
+          nhsNumber: data['nhs-number'],
+        }),
+      );
     } catch (e) {
       console.error('Search failed:', e);
     }
@@ -83,9 +89,7 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
       surveyModel.clear(true, true);
     }
     try {
-      const all = await patientRepository.getAllPatients();
-      setSearchResults(all);
-      setHasSearched(true);
+      await applyResults(() => patientRepository.getAllPatients());
     } catch (e) {
       console.error('Failed to reload patients:', e);
     }
@@ -112,7 +116,11 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
                 schema={schema}
                 onComplete={handleSearchExecute}
                 showNavigationButtons={false}
-                onModelReady={(model) => setSurveyModel(model)}
+                onModelReady={(model) => {
+                  // Commit text per keystroke; blur-commit text can be wiped by a re-render before Search reads it
+                  model.textUpdateMode = 'onTyping';
+                  setSurveyModel(model);
+                }}
               />
             </div>
 

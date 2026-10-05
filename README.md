@@ -25,12 +25,29 @@ The application implements a realistic clinical workflow, split by user role:
 - **My profile** — a patient signs in and sees only their own record
 - **Revoke visit** — a patient can remove a visit from their own history
 
+## Navigation & URLs
+
+Every view has its own URL (client-side routing via `react-router-dom`), so browser Back/Forward and deep links work:
+
+| Route | View | Access |
+| --- | --- | --- |
+| `/login` | Login screen | public (signed-in users are redirected to their home view) |
+| `/register` | Register Patient | staff |
+| `/manage` | Manage Patients (search + list) | staff |
+| `/patients/:id` | Patient profile | staff |
+| `/medications` | Practice Medication Overview | staff |
+| `/settings` | Inpatient & Clinical Settings | staff |
+| `/my-profile` | Patient portal (own record) | patient |
+
+Unauthenticated visitors are redirected to `/login`; unknown URLs redirect to the role's home view (`/manage` for staff, `/my-profile` for patients). Patients hitting staff URLs are redirected to `/my-profile`.
+
 ## Technology Stack
 
 | Layer | Technology |
 | --- | --- |
 | UI framework | React 19 + TypeScript |
 | Build tool | Vite |
+| Routing | `react-router-dom` |
 | Forms | `survey-core`, `survey-react-ui` |
 | Form builder | `survey-creator-core`, `survey-creator-react` |
 | Backend | Express + `better-sqlite3` (SQLite) |
@@ -131,7 +148,7 @@ src/
   types/                Patient, form, and auth type definitions
 tests/
   unit/               Vitest: API, DB, survey mapping, schema linting
-  e2e/                Playwright: auth, editing, form builder, read screens
+  e2e/                Playwright: auth, routing, editing, form builder, read screens
 ```
 
 ## Run Locally

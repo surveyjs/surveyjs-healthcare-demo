@@ -56,7 +56,7 @@ test('reset filters restores the full patient list after a no-match search', asy
 
 test('registering a patient via the SurveyJS form persists it to SQLite', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Register Patient' }).click();
+  await page.getByRole('link', { name: 'Register Patient' }).click();
 
   await page.getByRole('textbox', { name: 'First Name' }).fill('Oliver');
   await page.getByRole('textbox', { name: 'Last Name' }).fill('Stone');
@@ -138,7 +138,7 @@ test('adding a visit via the SurveyJS modal persists it to SQLite', async ({ pag
 
 test('validation errors appear below the input', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Register Patient' }).click();
+  await page.getByRole('link', { name: 'Register Patient' }).click();
   await page.getByRole('button', { name: 'Save Patient' }).click();
 
   const error = page.locator('.sd-error').first();
@@ -161,7 +161,7 @@ test('adding a prescription via the SurveyJS modal persists it to SQLite', async
 
   // Also visible in the cross-patient medications registry after reload
   await page.goto('/');
-  await page.getByRole('button', { name: 'Medications' }).click();
+  await page.getByRole('link', { name: 'Medications' }).click();
   await expect(page.getByRole('cell', { name: /Paracetamol 500mg Tablets/ })).toBeVisible();
 });
 
