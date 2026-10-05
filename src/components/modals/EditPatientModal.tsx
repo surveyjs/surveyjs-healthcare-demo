@@ -79,6 +79,8 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
             initialData={initialData}
             onComplete={handleComplete}
             showNavigationButtons={false}
+            showCompletePage={false}
+            className="survey-modal"
             onModelReady={(model) => setSurveyModel(model)}
           />
 

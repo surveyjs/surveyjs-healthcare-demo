@@ -97,7 +97,12 @@ export function mapPatientToSurveyData(patient: Patient): Record<string, any> {
 }
 
 export function mapSurveyToVisit(visitData: Record<string, any>): Visit {
-  const practitionerValue = visitData.practitioner || 'Dr. Sarah Miller';
+  // A "Other" selection stores the practitioner name in the question comment
+  const practitionerRaw =
+    visitData.practitioner === 'other'
+      ? String(visitData['practitioner-Comment'] ?? '').trim()
+      : visitData.practitioner;
+  const practitionerValue = practitionerRaw || 'Dr. Sarah Miller';
   const practitionerMap: Record<string, string> = {
     dr_smith: 'Dr. Smith',
     dr_jones: 'Dr. Jones',

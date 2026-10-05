@@ -15,4 +15,15 @@
   }
 }
 
+/* Modal-hosted SurveyJS forms: tighter question rhythm and no inner horizontal
+   padding (the modal wrapper already provides it). The gap token needs
+   !important because survey.applyTheme() injects its value as an inline style
+   on the survey root, which otherwise beats any class-level override. */
+.survey-modal .sjs-theme-overrides {
+  --sjs2-layout-component-page-content-area-gap-vertical: calc(var(--spacing, 0.25rem) * 4) !important;
+  --sjs2-layout-component-page-content-area-padding-horizontal: 0px;
+  --sjs2-layout-component-survey-box-gap-vertical: calc(var(--spacing, 0.25rem) * 2);
+}
+
+
 

@@ -13,6 +13,8 @@ export interface SurveyRendererProps {
   readOnly?: boolean;
   completeText?: string;
   showNavigationButtons?: boolean | string;
+  /** Set to false for modal-hosted forms so the "Thank you" page never flashes before the modal closes. */
+  showCompletePage?: boolean;
   onModelReady?: (model: Model) => void;
   className?: string;
 }
@@ -25,6 +27,7 @@ export const SurveyRenderer: React.FC<SurveyRendererProps> = ({
   readOnly = false,
   completeText,
   showNavigationButtons,
+  showCompletePage,
   onModelReady,
   className = '',
 }) => {
@@ -51,6 +54,10 @@ export const SurveyRenderer: React.FC<SurveyRendererProps> = ({
       model.showNavigationButtons = showNavigationButtons;
     }
 
+    if (showCompletePage !== undefined) {
+      model.showCompletePage = showCompletePage;
+    }
+
     if (readOnly) {
       model.mode = 'display';
     }
@@ -60,7 +67,7 @@ export const SurveyRenderer: React.FC<SurveyRendererProps> = ({
     }
 
     return model;
-  }, [schema, readOnly, completeText, showNavigationButtons]);
+  }, [schema, readOnly, completeText, showNavigationButtons, showCompletePage]);
 
   useEffect(() => {
     modelRef.current = survey;

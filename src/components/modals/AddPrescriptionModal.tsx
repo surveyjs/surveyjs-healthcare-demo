@@ -87,6 +87,8 @@ export const AddPrescriptionModal: React.FC<AddPrescriptionModalProps> = ({
             initialData={initialData}
             onComplete={handleComplete}
             showNavigationButtons={false}
+            showCompletePage={false}
+            className="survey-modal"
             onModelReady={(model) => setSurveyModel(model)}
           />
 

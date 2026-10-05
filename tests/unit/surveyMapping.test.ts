@@ -122,6 +122,19 @@ describe('mapSurveyToVisit', () => {
     expect(visit.visitType).toBe('Home Visit');
     expect(visit.practitioner).toBe('Dr. House');
   });
+
+  it('resolves an "Other" practitioner from the question comment', () => {
+    const visit = mapSurveyToVisit({
+      practitioner: 'other',
+      'practitioner-Comment': 'Dr. Sarah Miller',
+    });
+    expect(visit.practitioner).toBe('Dr. Sarah Miller');
+  });
+
+  it('falls back to the default practitioner when "Other" has no comment', () => {
+    const visit = mapSurveyToVisit({ practitioner: 'other', 'practitioner-Comment': '  ' });
+    expect(visit.practitioner).toBe('Dr. Sarah Miller');
+  });
 });
 
 describe('mapSurveyToPrescription', () => {

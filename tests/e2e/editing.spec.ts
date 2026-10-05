@@ -164,3 +164,33 @@ test('adding a prescription via the SurveyJS modal persists it to SQLite', async
   await page.getByRole('button', { name: 'Medications' }).click();
   await expect(page.getByRole('cell', { name: /Paracetamol 500mg Tablets/ })).toBeVisible();
 });
+
+test('visit modal defaults the practitioner to the signed-in doctor and never flashes the completion page', async ({
+  page,
+}) => {
+  await openEmmaProfile(page);
+
+  // Delay the save API so a rendered completion page would stay visible long enough to be caught
+  await page.route('**/api/patients/*/visits', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await route.continue();
+  });
+
+  await page.getByRole('button', { name: 'Add New Visit' }).click();
+
+  // Dr. Sarah Miller is not among the schema's practitioner choices, so the
+  // dropdown selects "Other" and carries her name in the comment field
+  const practitionerQuestion = page.locator('[data-name="practitioner"]');
+  await expect(practitionerQuestion.locator('.sd-dropdown__input')).toContainText('Other');
+  await expect(practitionerQuestion.locator('textarea')).toHaveValue('Dr. Sarah Miller');
+
+  await page.getByRole('textbox', { name: 'Reason for Visit' }).fill('Completion flash check');
+  await page.getByRole('button', { name: 'Save Visit' }).click();
+
+  // While the save request is in flight the completion page must not render
+  await expect(page.locator('.sd-completedpage')).toHaveCount(0);
+  await expect(page.getByText('Thank you for completing the survey')).toHaveCount(0);
+
+  await expect(page.getByText('Completion flash check').first()).toBeVisible();
+  await expect(page.getByText('Practitioner: Dr. Sarah Miller').first()).toBeVisible();
+});

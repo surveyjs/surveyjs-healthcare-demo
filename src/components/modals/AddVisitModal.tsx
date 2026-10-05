@@ -3,6 +3,7 @@ import { X, Check, Settings } from 'lucide-react';
 import { Patient } from '../../types/patient';
 import { formRepository } from '../../repositories/formRepository';
 import { patientRepository } from '../../repositories/patientRepository';
+import { authRepository } from '../../repositories/authRepository';
 import { SurveyRenderer } from '../../survey/SurveyRenderer';
 import { Model } from 'survey-core';
 import { FormId } from '../../types/forms';
@@ -13,6 +14,29 @@ interface AddVisitModalProps {
   onClose: () => void;
   onSaved: (patient: Patient) => void;
   onOpenBuilder?: (formId: FormId) => void;
+}
+
+type SchemaChoice = string | { value?: string; text?: string };
+
+const choiceValue = (c: SchemaChoice) => (typeof c === 'string' ? c : (c.value ?? ''));
+const choiceText = (c: SchemaChoice) => (typeof c === 'string' ? c : (c.text ?? c.value ?? ''));
+
+/**
+ * The logged-in doctor is the default practitioner. If they are not among the
+ * schema's choices, their full name selects the dropdown's "Other" item
+ * (SurveyJS moves unlisted values into the comment). Non-doctor contexts fall
+ * back to the first choice.
+ */
+function getPractitionerDefault(schema: object): string | undefined {
+  const pages = (schema as { pages?: { elements?: { name?: string; choices?: SchemaChoice[] }[] }[] }).pages ?? [];
+  const question = pages.flatMap((p) => p.elements ?? []).find((el) => el.name === 'practitioner');
+  const choices = question?.choices ?? [];
+  const user = authRepository.getStoredUser();
+  if (user?.role === 'doctor') {
+    const match = choices.find((c) => choiceText(c) === user.fullName);
+    return match ? choiceValue(match) : user.fullName;
+  }
+  return choices.length > 0 ? choiceValue(choices[0]) : undefined;
 }
 
 export const AddVisitModal: React.FC<AddVisitModalProps> = ({
@@ -42,7 +66,7 @@ export const AddVisitModal: React.FC<AddVisitModalProps> = ({
     visit_date: now.toISOString().split('T')[0],
     visit_time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
     visit_type: 'consultation',
-    practitioner: 'dr_smith',
+    practitioner: getPractitionerDefault(schema),
   };
 
   const handleComplete = async (data: Record<string, any>) => {
@@ -87,6 +111,8 @@ export const AddVisitModal: React.FC<AddVisitModalProps> = ({
             initialData={initialData}
             onComplete={handleComplete}
             showNavigationButtons={false}
+            showCompletePage={false}
+            className="survey-modal"
             onModelReady={(model) => setSurveyModel(model)}
           />
 
