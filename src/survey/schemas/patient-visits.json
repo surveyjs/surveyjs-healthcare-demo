@@ -16,17 +16,7 @@
               "title": "Visit Date",
               "setValueIf": "{visit_list[0].visit_date} notempty",
               "isRequired": true,
-              "validators": [
-                {
-                  "type": "expression",
-                  "expression": "{panel.visit_date} >= 'today()'"
-                }
-              ],
-              "maskType": "datetime",
-              "maskSettings": {
-                "pattern": "mm/dd/yyyy",
-                "min": "2026-09-08"
-              }
+              "inputType": "date"
             },
             {
               "type": "text",
@@ -98,10 +88,7 @@
               "name": "follow_up_date",
               "startWithNewLine": false,
               "title": "Follow-up Date",
-              "maskType": "datetime",
-              "maskSettings": {
-                "pattern": "mm/dd/yyyy"
-              }
+              "inputType": "date"
             },
             {
               "type": "comment",

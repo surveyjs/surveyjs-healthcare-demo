@@ -9,15 +9,12 @@
           "name": "visit_date",
           "title": "Visit Date",
           "isRequired": true,
-          "maskType": "datetime",
-          "maskSettings": {
-            "pattern": "mm/dd/yyyy"
-          }
+          "inputType": "date",
+          "defaultValueExpression": "today()"
         },
         {
           "type": "text",
           "name": "visit_time",
-          "startWithNewLine": false,
           "title": "Visit Time",
           "inputType": "time"
         },
@@ -48,7 +45,6 @@
         {
           "type": "dropdown",
           "name": "practitioner",
-          "startWithNewLine": false,
           "title": "Practitioner",
           "choices": [
             {
@@ -76,18 +72,13 @@
         {
           "type": "text",
           "name": "diagnosis",
-          "startWithNewLine": false,
           "title": "Diagnosis"
         },
         {
           "type": "text",
           "name": "follow_up_date",
-          "startWithNewLine": false,
           "title": "Follow-up Date",
-          "maskType": "datetime",
-          "maskSettings": {
-            "pattern": "mm/dd/yyyy"
-          }
+          "inputType": "date"
         },
         {
           "type": "comment",

@@ -106,11 +106,14 @@ describe('mapSurveyToVisit', () => {
       practitioner: 'dr_jones',
       reason_for_visit: 'BP check',
       diagnosis: 'Stable',
+      follow_up_date: '2024-06-15',
     });
 
     expect(visit.visitType).toBe('Follow-up');
     expect(visit.practitioner).toBe('Dr. Jones');
+    // Native date inputs produce ISO yyyy-mm-dd; it must pass through unchanged
     expect(visit.visitDate).toBe('2024-06-01');
+    expect(visit.followUpDate).toBe('2024-06-15');
     expect(visit.reasonForVisit).toBe('BP check');
   });
 

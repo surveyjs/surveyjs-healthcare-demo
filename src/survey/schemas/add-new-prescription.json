@@ -13,7 +13,6 @@
         {
           "type": "dropdown",
           "name": "frequency",
-          "startWithNewLine": false,
           "title": "Frequency",
           "choices": [
             {
@@ -51,7 +50,6 @@
         {
           "type": "dropdown",
           "name": "unit",
-          "startWithNewLine": false,
           "title": "Unit",
           "choices": [
             "mg",
@@ -100,7 +98,6 @@
         {
           "type": "text",
           "name": "end_date",
-          "startWithNewLine": false,
           "title": "End Date",
           "inputType": "date"
         },

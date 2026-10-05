@@ -92,15 +92,41 @@ test('adding a visit via the SurveyJS modal persists it to SQLite', async ({ pag
   await openEmmaProfile(page);
 
   await page.getByRole('button', { name: 'Add New Visit' }).click();
+
+  // Visit Date is a native date input, prefilled with today and editable
+  const visitDate = page.getByRole('textbox', { name: 'Visit Date' });
+  await expect(visitDate).toHaveAttribute('type', 'date');
+  await expect(visitDate).toHaveValue(new Date().toISOString().split('T')[0]);
+  await visitDate.fill('2026-01-15');
+
+  // Modal forms are single-column: Visit Time renders below Visit Date
+  const dateBox = await visitDate.boundingBox();
+  const timeBox = await page.getByRole('textbox', { name: 'Visit Time' }).boundingBox();
+  expect(timeBox!.y).toBeGreaterThanOrEqual(dateBox!.y + dateBox!.height);
+
   await page.getByRole('textbox', { name: 'Reason for Visit' }).fill('Annual wellbeing review');
   await page.getByRole('textbox', { name: 'Diagnosis' }).fill('Healthy');
   await page.getByRole('button', { name: 'Save Visit' }).click();
 
   await expect(page.getByText('Annual wellbeing review').first()).toBeVisible();
 
-  // Reload and verify persistence
+  // Reload and verify persistence, including the edited visit date (15 Jan 2026)
   await openEmmaProfile(page);
   await expect(page.getByText('Annual wellbeing review').first()).toBeVisible();
+  await expect(page.getByText('Jan 2026').first()).toBeVisible();
+});
+
+test('validation errors appear below the input', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Register Patient' }).click();
+  await page.getByRole('button', { name: 'Save Patient' }).click();
+
+  const error = page.locator('.sd-error').first();
+  await expect(error).toBeVisible();
+
+  const inputBox = await page.getByRole('textbox', { name: 'First Name' }).boundingBox();
+  const errorBox = await error.boundingBox();
+  expect(errorBox!.y).toBeGreaterThanOrEqual(inputBox!.y + inputBox!.height);
 });
 
 test('adding a prescription via the SurveyJS modal persists it to SQLite', async ({ page }) => {

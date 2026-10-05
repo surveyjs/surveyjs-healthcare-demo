@@ -17,7 +17,7 @@ The application implements a realistic clinical workflow, split by user role:
 - **Patient registration** — multi-section SurveyJS form capturing demographics, address, and emergency contact
 - **Patient search & management** — filter patients by surname (required), birth date, or NHS number using a SurveyJS-driven search form. The form is prefilled with the surname "Thompson", which several seeded patients share, so the default search demonstrates multi-result matching
 - **Patient profile** — basic details, contact details, visit history, and prescribed medications
-- **Edit patient / Add visit / Add prescription** — modal workflows powered by the corresponding SurveyJS forms, with validation and immediate profile updates
+- **Edit patient / Add visit / Add prescription** — modal workflows powered by the corresponding SurveyJS forms, with validation and immediate profile updates. Modal forms render single-column, all date fields use native date pickers (the visit date defaults to today and stays editable), and validation errors appear below the inputs
 - **Form builder** — open any application form in the embedded Survey Creator, modify it (add/remove/reorder questions, edit choices, validation, visibility logic), save the JSON, and see the updated form rendered in the app immediately
 
 ### Patient portal use cases
@@ -48,6 +48,7 @@ The integration follows the standard SurveyJS React setup, wrapped in two reusab
 2. **[SurveyRenderer.tsx](src/survey/SurveyRenderer.tsx)** — a single reusable renderer used by every page and modal. It:
    - creates a SurveyJS `Model` from a JSON schema (memoized per schema),
    - applies the `DefaultLightPanelless` theme and imports `survey-core/survey-core.min.css` plus the local Tailwind adapter,
+   - places validation errors below the inputs (`questionErrorLocation: "bottom"`) for every rendered form,
    - applies `initialData` for edit workflows and supports `readOnly` (display mode),
    - exposes `onComplete` / `onValueChanged` callbacks that hand `survey.data` back to the host, and `onModelReady` for advanced cases (e.g. the login page cancelling `onCompleting`).
 3. **[SurveyCreatorModal.tsx](src/survey/SurveyCreatorModal.tsx)** — embeds the Survey Creator in a modal. It loads the same JSON the Form Library renders; saving persists the edited schema through `formRepository`, closing the round-trip:

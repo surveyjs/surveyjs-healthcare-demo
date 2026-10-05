@@ -40,6 +40,9 @@ export const SurveyRenderer: React.FC<SurveyRendererProps> = ({
     // Titles are rendered by the host pages/modals
     model.showTitle = false;
 
+    // Validation errors belong under the input, not above it
+    model.questionErrorLocation = 'bottom';
+
     if (completeText) {
       model.completeText = completeText;
     }
