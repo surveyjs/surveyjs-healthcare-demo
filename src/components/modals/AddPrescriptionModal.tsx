@@ -6,10 +6,13 @@ import { patientRepository } from '../../repositories/patientRepository';
 import { SurveyRenderer } from '../../survey/SurveyRenderer';
 import { Model } from 'survey-core';
 import { FormId } from '../../types/forms';
+import { Prescription } from '../../types/patient';
+import { SurveyPDF } from 'survey-pdf';
 
 interface AddPrescriptionModalProps {
   isOpen: boolean;
   patient: Patient | null;
+  prescription?: Prescription | null;
   onClose: () => void;
   onSaved: (patient: Patient) => void;
   onOpenBuilder?: (formId: FormId) => void;
@@ -18,6 +21,7 @@ interface AddPrescriptionModalProps {
 export const AddPrescriptionModal: React.FC<AddPrescriptionModalProps> = ({
   isOpen,
   patient,
+  prescription = null,
   onClose,
   onSaved,
   onOpenBuilder,
@@ -38,16 +42,22 @@ export const AddPrescriptionModal: React.FC<AddPrescriptionModalProps> = ({
 
   const schema = formRepository.getForm('add-new-prescription');
   const now = new Date().toISOString().split('T')[0];
-  const initialData = {
-    start_date: now,
-    frequency: 'once_daily',
-    unit: 'tablets',
-    question1: '1',
-  };
+  const initialData = prescription
+    ? patientRepository.mapPrescriptionToSurveyData(prescription)
+    : {
+        start_date: now,
+        frequency: 'once_daily',
+        unit: 'tablets',
+        question1: '1',
+      };
 
   const handleComplete = async (data: Record<string, any>) => {
     try {
-      await patientRepository.addPrescription(patient.id, data);
+      if (prescription) {
+        await patientRepository.updatePrescription(patient.id, prescription.id, data);
+      } else {
+        await patientRepository.addPrescription(patient.id, data);
+      }
       const updated = await patientRepository.getPatientById(patient.id);
       if (updated) {
         onSaved(updated);
@@ -55,6 +65,22 @@ export const AddPrescriptionModal: React.FC<AddPrescriptionModalProps> = ({
       onClose();
     } catch (e) {
       console.error('Failed to add prescription:', e);
+    }
+  };
+
+  const handlePreviewAndPrint = async () => {
+    if (!surveyModel || !patient) return;
+    try {
+      const pdf = new SurveyPDF(schema);
+      pdf.data = surveyModel.data;
+      const recordName = prescription?.medication || surveyModel.data.medication || 'prescription';
+      const fileName = `${patient.lastName}-${recordName}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') + '.pdf';
+      await pdf.save(fileName);
+    } catch (error) {
+      console.error('Failed to export prescription PDF:', error);
     }
   };
 
@@ -69,7 +95,7 @@ export const AddPrescriptionModal: React.FC<AddPrescriptionModalProps> = ({
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white shrink-0">
-          <h2 className="text-lg font-bold text-gray-900">Add New Prescription</h2>
+          <h2 className="text-lg font-bold text-gray-900">{prescription ? 'Edit Prescription' : 'Add New Prescription'}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -82,7 +108,7 @@ export const AddPrescriptionModal: React.FC<AddPrescriptionModalProps> = ({
         {/* Modal Content / Survey Form */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <SurveyRenderer
-            key={`rx-${patient.id}-${schemaVersion}`}
+            key={`rx-${patient.id}-${prescription?.id || 'new'}-${schemaVersion}`}
             schema={schema}
             initialData={initialData}
             onComplete={handleComplete}
@@ -114,7 +140,16 @@ export const AddPrescriptionModal: React.FC<AddPrescriptionModalProps> = ({
             className="inline-flex items-center gap-2 bg-[#00695c] hover:bg-[#004d40] text-white text-sm font-medium px-4 py-2 rounded-md shadow-xs transition-colors cursor-pointer"
           >
             <Check className="w-4 h-4" />
-            <span>Save Prescription</span>
+            <span>{prescription ? 'Save Changes' : 'Save Prescription'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePreviewAndPrint}
+            disabled={!surveyModel}
+            className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-medium px-4 py-2 rounded-md transition-colors cursor-pointer"
+          >
+            <span>Preview and Print</span>
           </button>
 
           <button

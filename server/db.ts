@@ -158,6 +158,13 @@ export function createDb(dbPath: string) {
     )
   `);
 
+  const updatePrescriptionStmt = db.prepare(`
+    UPDATE prescriptions SET
+      medication = @medication, frequency = @frequency, dosage = @dosage, unit = @unit,
+      start_date = @startDate, end_date = @endDate, instructions = @instructions, status = @status
+    WHERE patient_id = @patientId AND id = @id AND status = 'Active'
+  `);
+
   function patientToParams(p: Patient, seq: number) {
     return {
       id: p.id,
@@ -436,6 +443,12 @@ export function createDb(dbPath: string) {
       const withId: Prescription = { ...rx, id: rx.id || `rx-${Date.now()}` };
       insertPrescriptionStmt.run(prescriptionToParams(patientId, withId, nextSeq('prescriptions', patientId)));
       return withId;
+    },
+
+    updatePrescription(patientId: string, prescriptionId: string, rx: Prescription): Prescription | undefined {
+      const withId: Prescription = { ...rx, id: prescriptionId };
+      const result = updatePrescriptionStmt.run(prescriptionToParams(patientId, withId, 0));
+      return result.changes > 0 ? withId : undefined;
     },
 
     removeVisit(patientId: string, visitId: string): boolean {

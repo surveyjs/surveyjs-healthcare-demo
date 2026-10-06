@@ -191,6 +191,46 @@ describe('patients API', () => {
     expect(patient.prescriptions[0].id).toBe(prescription.id);
   });
 
+  it('PUT /api/patients/:id/prescriptions/:prescriptionId edits active prescriptions only', async () => {
+    await api('/admin/reset', { method: 'POST' });
+    const updated = await api('/patients/p-emma-thompson/prescriptions/rx1', {
+      method: 'PUT',
+      body: JSON.stringify({
+        medication: 'Amlodipine 10mg Tablets',
+        frequency: 'Once daily',
+        dosage: '1 tablet',
+        unit: 'tablet(s)',
+        startDate: '2024-01-15',
+        endDate: 'Ongoing',
+        instructions: 'Take with breakfast.',
+        status: 'Active',
+      }),
+    });
+    expect(updated.status).toBe(200);
+    const response = await updated.json();
+    expect(response.prescription).toMatchObject({ id: 'rx1', medication: 'Amlodipine 10mg Tablets' });
+    expect(response.patient.prescriptions[0].instructions).toBe('Take with breakfast.');
+
+    const completed = await api('/patients/p-emma-thompson/prescriptions/rx2', {
+      method: 'PUT',
+      body: JSON.stringify({ medication: 'Ibuprofen updated' }),
+    });
+    expect(completed.status).toBe(400);
+    expect((await completed.json()).error).toMatch(/active prescriptions/i);
+
+    const missing = await api('/patients/p-emma-thompson/prescriptions/missing', {
+      method: 'PUT',
+      body: JSON.stringify({ medication: 'Unknown' }),
+    });
+    expect(missing.status).toBe(404);
+
+    const invalid = await api('/patients/p-emma-thompson/prescriptions/rx1', {
+      method: 'PUT',
+      body: JSON.stringify({ medication: ' ' }),
+    });
+    expect(invalid.status).toBe(400);
+  });
+
   it('POST /api/admin/reset restores seed data', async () => {
     const res = await api('/admin/reset', { method: 'POST' });
     expect(res.status).toBe(200);

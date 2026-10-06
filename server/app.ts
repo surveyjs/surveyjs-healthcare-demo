@@ -136,6 +136,34 @@ export function createApp(db: HealthcareDb): Express {
     res.status(201).json({ prescription, patient: db.getPatient(req.params.id) });
   });
 
+  app.put('/api/patients/:id/prescriptions/:prescriptionId', (req, res) => {
+    const body = req.body;
+    if (!body || typeof body !== 'object' || typeof body.medication !== 'string' || !body.medication.trim()) {
+      res.status(400).json({ error: 'medication is required' });
+      return;
+    }
+
+    const patient = db.getPatient(req.params.id);
+    const existingPrescription = patient?.prescriptions.find(
+      (prescription) => prescription.id === req.params.prescriptionId,
+    );
+    if (!existingPrescription) {
+      res.status(404).json({ error: 'Prescription not found' });
+      return;
+    }
+    if (existingPrescription.status !== 'Active') {
+      res.status(400).json({ error: 'Only active prescriptions can be edited' });
+      return;
+    }
+
+    const prescription = db.updatePrescription(req.params.id, req.params.prescriptionId, body);
+    if (!prescription) {
+      res.status(409).json({ error: 'Prescription is no longer editable' });
+      return;
+    }
+    res.json({ prescription, patient: db.getPatient(req.params.id) });
+  });
+
   app.post('/api/admin/reset', (_req, res) => {
     db.resetToInitial();
     res.json({ status: 'reset' });

@@ -164,6 +164,41 @@ describe('healthcare SQLite db', () => {
     expect(emma.prescriptions[0].medication).toBe('Paracetamol 500mg');
   });
 
+  it('updates active prescriptions but refuses completed or missing prescriptions', () => {
+    const prescription = db.addPrescription('p-emma-thompson', {
+      id: 'rx-editable',
+      medication: 'Original medication',
+      frequency: 'Once daily',
+      dosage: '1 tablet',
+      unit: 'tablets',
+      startDate: '2026-10-06',
+      endDate: 'Ongoing',
+      instructions: '',
+      status: 'Active',
+    })!;
+
+    const updated = db.updatePrescription('p-emma-thompson', prescription.id, {
+      ...prescription,
+      medication: 'Updated medication',
+      instructions: 'Take with food.',
+    });
+    expect(updated).toMatchObject({ medication: 'Updated medication', instructions: 'Take with food.' });
+    expect(db.getPatient('p-emma-thompson')!.prescriptions[0]).toMatchObject({
+      id: prescription.id,
+      medication: 'Updated medication',
+    });
+
+    expect(
+      db.updatePrescription('p-emma-thompson', 'rx2', {
+        ...prescription,
+        id: 'rx2',
+        medication: 'Must remain unchanged',
+      }),
+    ).toBeUndefined();
+    expect(db.updatePrescription('p-emma-thompson', 'missing', prescription)).toBeUndefined();
+    expect(db.updatePrescription('no-patient', prescription.id, prescription)).toBeUndefined();
+  });
+
   it('searches by last name (case-insensitive, partial)', () => {
     const results = db.listPatients({ lastName: 'thomp' });
     expect(results).toHaveLength(3);

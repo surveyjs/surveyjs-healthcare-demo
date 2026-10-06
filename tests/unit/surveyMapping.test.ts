@@ -6,6 +6,7 @@ import {
   mapSurveyToVisit,
   mapVisitToSurveyData,
   mapSurveyToPrescription,
+  mapPrescriptionToSurveyData,
 } from '../../src/repositories/surveyMapping';
 import { Patient } from '../../src/types/patient';
 
@@ -38,6 +39,32 @@ const basePatient: Patient = {
   visits: [],
   prescriptions: [],
 };
+
+describe('mapPrescriptionToSurveyData', () => {
+  it('prefills editable prescription fields and converts dates to native input values', () => {
+    expect(
+      mapPrescriptionToSurveyData({
+        id: 'rx-1',
+        medication: 'Amlodipine 5mg Tablets',
+        frequency: 'Once daily',
+        dosage: '1 tablet',
+        unit: 'tablet(s)',
+        startDate: '15/01/2024',
+        endDate: 'Ongoing',
+        instructions: 'Take each morning.',
+        status: 'Active',
+      }),
+    ).toEqual({
+      medication: 'Amlodipine 5mg Tablets',
+      frequency: 'once_daily',
+      question1: '1',
+      unit: 'tablets',
+      start_date: '2024-01-15',
+      end_date: '',
+      instructions: 'Take each morning.',
+    });
+  });
+});
 
 describe('mapSurveyToNewPatient', () => {
   it('maps flat and nested survey fields to a patient', () => {

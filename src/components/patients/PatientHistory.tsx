@@ -9,6 +9,7 @@ interface PatientHistoryProps {
   onOpenPrescriptionModal?: () => void;
   onRevokeVisit?: (visitId: string) => void;
   onEditVisit?: (visit: Visit) => void;
+  onEditPrescription?: (prescription: Prescription) => void;
 }
 
 export const PatientHistory: React.FC<PatientHistoryProps> = ({
@@ -18,6 +19,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
   onOpenPrescriptionModal,
   onRevokeVisit,
   onEditVisit,
+  onEditPrescription,
 }) => {
   const today = new Date();
   const todayISODate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -227,15 +229,28 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-bold text-gray-900">{rx.medication}</h4>
-                      <span
-                        className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${
-                          isActive
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-gray-100 text-gray-600 border-gray-200'
-                        }`}
-                      >
-                        {rx.status}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${
+                            isActive
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-gray-100 text-gray-600 border-gray-200'
+                          }`}
+                        >
+                          {rx.status}
+                        </span>
+                        {isActive && onEditPrescription && (
+                          <button
+                            type="button"
+                            onClick={() => onEditPrescription(rx)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-[#00695c] hover:underline cursor-pointer"
+                            aria-label={`Edit prescription: ${rx.medication}`}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">

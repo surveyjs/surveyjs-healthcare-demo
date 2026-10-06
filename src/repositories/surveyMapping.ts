@@ -187,3 +187,41 @@ export function mapSurveyToPrescription(rxData: Record<string, any>): Prescripti
     status: rxData.end_date && new Date(rxData.end_date) < new Date() ? 'Completed' : 'Active',
   };
 }
+
+export function mapPrescriptionToSurveyData(prescription: Prescription): Record<string, any> {
+  const frequencyValues: Record<string, string> = {
+    'Once daily': 'once_daily',
+    'Twice daily': 'twice_daily',
+    'Three times daily': 'three_times_daily',
+    'Four times daily': 'four_times_daily',
+    'As needed': 'as_needed',
+  };
+  const unitValues: Record<string, string> = {
+    'tablet(s)': 'tablets',
+    'capsule(s)': 'capsules',
+    'unit(s)': 'units',
+    'drop(s)': 'drops',
+    'puff(s)': 'puffs',
+    'spray(s)': 'sprays',
+    'patch(es)': 'patches',
+  };
+  const dateForInput = (value?: string): string => {
+    if (!value || value === 'Ongoing') return '';
+    const isoDate = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoDate) return isoDate[1];
+    const ukDate = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    return ukDate ? `${ukDate[3]}-${ukDate[2]}-${ukDate[1]}` : '';
+  };
+  const dosage = String(prescription.dosage || '');
+  const doseAmount = dosage.match(/^\s*(\d+(?:\.\d+)?)/)?.[1] || '';
+
+  return {
+    medication: prescription.medication,
+    frequency: frequencyValues[prescription.frequency || ''] || prescription.frequency || '',
+    question1: doseAmount,
+    unit: unitValues[prescription.unit || ''] || prescription.unit || '',
+    start_date: dateForInput(prescription.startDate),
+    end_date: dateForInput(prescription.endDate),
+    instructions: prescription.instructions || '',
+  };
+}

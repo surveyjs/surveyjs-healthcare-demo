@@ -17,7 +17,7 @@ The application implements a realistic clinical workflow, split by user role:
 - **Patient registration** — multi-section SurveyJS form capturing demographics, address, and emergency contact
 - **Patient search & management** — filter patients by surname, birth date, or NHS number using a SurveyJS-driven search form. All filters are optional; an empty search lists every patient. Several seeded patients share the surname "Thompson", so searching for it demonstrates multi-result matching
 - **Patient profile** — basic details, contact details, visit history, and prescribed medications
-- **Edit patient / Add visit / Add prescription** — modal workflows powered by the corresponding SurveyJS forms, with validation and immediate profile updates. Doctors can edit visits recorded today; older visits are read-only. The API enforces the same-day rule. Modal forms render single-column with compact spacing, all date fields use native date pickers (the visit date defaults to today and stays editable), and validation errors appear below the inputs. Saving closes the modal directly — the SurveyJS completion page is suppressed. The visit form's practitioner defaults to the signed-in doctor (via the dropdown's "Other" option when they are not among the schema's choices)
+- **Edit patient / Add visit / Add or edit prescription** — modal workflows powered by the corresponding SurveyJS forms, with validation and immediate profile updates. Doctors can edit visits recorded today and active prescriptions; older visits and completed prescriptions are read-only, enforced by the API. Prescription forms can export their current values as a PDF download. Modal forms render single-column with compact spacing, all date fields use native date pickers (the visit date defaults to today and stays editable), and validation errors appear below the inputs. Saving closes the modal directly — the SurveyJS completion page is suppressed. The visit form's practitioner defaults to the signed-in doctor (via the dropdown's "Other" option when they are not among the schema's choices)
 - **Form builder** — open any application form in the embedded Survey Creator, modify it (add/remove/reorder questions, edit choices, validation, visibility logic), save the JSON, and see the updated form rendered in the app immediately
 
 ### Patient portal use cases
@@ -50,6 +50,7 @@ Unauthenticated visitors are redirected to `/login`; unknown URLs redirect to th
 | Routing | `react-router-dom` |
 | Forms | `survey-core`, `survey-react-ui` |
 | Form builder | `survey-creator-core`, `survey-creator-react` |
+| PDF export | `survey-pdf` (SurveyJS PDF Generator; commercial license required for commercial use) |
 | Backend | Express + `better-sqlite3` (SQLite) |
 | Styling | Tailwind CSS v4 (+ a custom SurveyJS ↔ Tailwind theme adapter) |
 | Testing | Vitest (unit, incl. a SurveyJS schema lint gate) + Playwright (e2e) |
@@ -61,7 +62,7 @@ No custom form engine is used — all forms load and render the actual SurveyJS 
 
 The integration follows the standard SurveyJS React setup, wrapped in two reusable components:
 
-1. **Packages** — `survey-core` + `survey-react-ui` for rendering, `survey-creator-core` + `survey-creator-react` for the builder (all v3.x).
+1. **Packages** — `survey-core` + `survey-react-ui` for rendering, `survey-creator-core` + `survey-creator-react` for the builder, and `survey-pdf` for PDF export (all v3.x).
 2. **[SurveyRenderer.tsx](src/survey/SurveyRenderer.tsx)** — a single reusable renderer used by every page and modal. It:
    - creates a SurveyJS `Model` from a JSON schema (memoized per schema),
    - applies the `DefaultLightPanelless` theme and imports `survey-core/survey-core.min.css` plus the local Tailwind adapter,
@@ -112,6 +113,7 @@ Persistence is a real client–server setup:
   - [authRepository.ts](src/repositories/authRepository.ts) calls `POST /api/auth/login` / `GET /api/auth/roster` and keeps the session in `sessionStorage`/`localStorage` (key `hc-auth-user`). Passwords are stored as hashes server-side.
 - **Ordering** — visits and prescriptions use a `seq` column (newest = highest, `ORDER BY seq DESC`) so newly added records appear first.
 - **Visit updates** — `PUT /api/patients/:id/visits/:visitId` updates a visit in place only when both its saved date and submitted date are today; other visit updates are rejected.
+- **Prescription updates** — `PUT /api/patients/:id/prescriptions/:prescriptionId` updates active prescriptions only; the API and database both reject edits to completed or missing records.
 - **Test isolation** — e2e tests reset database state via `POST /api/admin/reset`; unit tests run the same `db.ts` against an in-memory SQLite database.
 
 Because all storage goes through the repositories, the SQLite backend could be swapped for any other API/database without touching the UI.
@@ -174,5 +176,7 @@ npm run lint       # TypeScript type check
 npm run test:unit  # Vitest unit tests (includes SurveyJS schema lint gate)
 npm run test:e2e   # Playwright end-to-end tests
 ```
+
+Playwright uses API port `4101` and web port `3100` by default. To avoid conflicts with a running local app, set `E2E_API_PORT` and `E2E_WEB_PORT` before running the suite.
 
 To reset the demo data, stop the server and delete `data/healthcare.db` (it re-seeds on next start), or call `POST /api/admin/reset`.

@@ -193,6 +193,42 @@ test('adding a prescription via the SurveyJS modal persists it to SQLite', async
   await expect(page.getByRole('cell', { name: /Paracetamol 500mg Tablets/ })).toBeVisible();
 });
 
+test('doctors can edit active prescriptions and completed prescriptions stay read-only', async ({ page }) => {
+  await openEmmaProfile(page);
+
+  const activeEdit = page.getByRole('button', { name: 'Edit prescription: Amlodipine 5mg Tablets' });
+  await expect(activeEdit).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit prescription: Ibuprofen 200mg Tablets' })).toHaveCount(0);
+  await activeEdit.click();
+
+  await expect(page.getByRole('heading', { name: 'Edit Prescription' })).toBeVisible();
+  const medication = page.getByRole('textbox', { name: 'Medication' });
+  await expect(medication).toHaveValue('Amlodipine 5mg Tablets');
+  await expect(page.getByRole('textbox', { name: 'Start Date' })).toHaveValue('2024-01-15');
+  await expect(page.getByRole('textbox', { name: 'End Date' })).toHaveValue('');
+  await medication.fill('Amlodipine 10mg Tablets');
+  await page.getByRole('textbox', { name: 'Instructions' }).fill('Take with breakfast.');
+  await page.getByRole('button', { name: 'Save Changes', exact: true }).click();
+
+  await expect(page.getByText('Prescription updated').first()).toBeVisible();
+  await expect(page.getByText('Amlodipine 10mg Tablets').first()).toBeVisible();
+
+  await openEmmaProfile(page);
+  await page.getByRole('button', { name: 'Edit prescription: Amlodipine 10mg Tablets' }).click();
+  await expect(page.getByRole('textbox', { name: 'Instructions' })).toHaveValue('Take with breakfast.');
+});
+
+test('prescription form exports the current values as a PDF download', async ({ page }) => {
+  await openEmmaProfile(page);
+  await page.getByRole('button', { name: 'Add New Prescription' }).click();
+  await page.getByRole('textbox', { name: 'Medication' }).fill('Paracetamol 500mg Tablets');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Preview and Print' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/thompson-paracetamol-500mg-tablets\.pdf/);
+});
+
 test('visit modal defaults the practitioner to the signed-in doctor and never flashes the completion page', async ({
   page,
 }) => {

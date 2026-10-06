@@ -6,6 +6,7 @@ import {
   mapSurveyToVisit,
   mapVisitToSurveyData,
   mapSurveyToPrescription,
+  mapPrescriptionToSurveyData,
 } from './surveyMapping';
 
 const API_BASE = '/api';
@@ -110,6 +111,24 @@ export const patientRepository = {
     );
     notifyListeners();
     return result.prescription;
+  },
+
+  async updatePrescription(
+    patientId: string,
+    prescriptionId: string,
+    rxData: Record<string, any>,
+  ): Promise<Prescription> {
+    const prescription = { ...mapSurveyToPrescription(rxData), id: prescriptionId };
+    const result = await request<{ prescription: Prescription; patient: Patient }>(
+      `/patients/${encodeURIComponent(patientId)}/prescriptions/${encodeURIComponent(prescriptionId)}`,
+      { method: 'PUT', body: JSON.stringify(prescription) },
+    );
+    notifyListeners();
+    return result.prescription;
+  },
+
+  mapPrescriptionToSurveyData(prescription: Prescription): Record<string, any> {
+    return mapPrescriptionToSurveyData(prescription);
   },
 
   async searchPatients(query: { lastName?: string; dateOfBirth?: string; nhsNumber?: string }): Promise<Patient[]> {
