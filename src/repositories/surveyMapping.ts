@@ -1,6 +1,14 @@
 import { Patient, Visit, Prescription } from '../types/patient';
 import { calculateAge } from '../utils/age';
 
+function dateForSurveyInput(value?: string): string {
+  if (!value || value === 'Ongoing') return '';
+  const isoDate = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoDate) return isoDate[1];
+  const ukDate = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return ukDate ? `${ukDate[3]}-${ukDate[2]}-${ukDate[1]}` : '';
+}
+
 export function mapSurveyToNewPatient(surveyData: Record<string, any>): Patient {
   const dob = surveyData.date_of_birth || '';
   const age = calculateAge(dob);
@@ -148,18 +156,22 @@ export function mapVisitToSurveyData(visit: Visit): Record<string, any> {
   const practitionerValue = practitionerValues[visit.practitioner];
 
   return {
-    visit_date: visit.visitDate,
+    visit_date: dateForSurveyInput(visit.visitDate),
     visit_time: visit.visitTime || '',
     visit_type: visitTypeValues[visit.visitType] || visit.visitType,
     practitioner: practitionerValue || 'other',
     ...(practitionerValue ? {} : { 'practitioner-Comment': visit.practitioner }),
     reason_for_visit: visit.reasonForVisit || '',
     diagnosis: visit.diagnosis || '',
-    follow_up_date: visit.followUpDate || '',
+    follow_up_date: dateForSurveyInput(visit.followUpDate),
     symptoms_notes: visit.symptomsNotes || '',
     treatment_recommendations: visit.treatmentRecommendations || '',
     internal_notes: visit.internalNotes || '',
   };
+}
+
+export function mapVisitsToSurveyData(visits: Visit[]): Record<string, any> {
+  return { visit_list: visits.map(mapVisitToSurveyData) };
 }
 
 export function mapSurveyToPrescription(rxData: Record<string, any>): Prescription {
@@ -205,13 +217,6 @@ export function mapPrescriptionToSurveyData(prescription: Prescription): Record<
     'spray(s)': 'sprays',
     'patch(es)': 'patches',
   };
-  const dateForInput = (value?: string): string => {
-    if (!value || value === 'Ongoing') return '';
-    const isoDate = value.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (isoDate) return isoDate[1];
-    const ukDate = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    return ukDate ? `${ukDate[3]}-${ukDate[2]}-${ukDate[1]}` : '';
-  };
   const dosage = String(prescription.dosage || '');
   const doseAmount = dosage.match(/^\s*(\d+(?:\.\d+)?)/)?.[1] || '';
 
@@ -220,8 +225,12 @@ export function mapPrescriptionToSurveyData(prescription: Prescription): Record<
     frequency: frequencyValues[prescription.frequency || ''] || prescription.frequency || '',
     question1: doseAmount,
     unit: unitValues[prescription.unit || ''] || prescription.unit || '',
-    start_date: dateForInput(prescription.startDate),
-    end_date: dateForInput(prescription.endDate),
+    start_date: dateForSurveyInput(prescription.startDate),
+    end_date: dateForSurveyInput(prescription.endDate),
     instructions: prescription.instructions || '',
   };
+}
+
+export function mapPrescriptionsToSurveyData(prescriptions: Prescription[]): Record<string, any> {
+  return { medications: prescriptions.map(mapPrescriptionToSurveyData) };
 }

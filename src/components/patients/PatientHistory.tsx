@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pill, Clock, Trash2, Pencil } from 'lucide-react';
 import { Visit, Prescription } from '../../types/patient';
+import { formRepository } from '../../repositories/formRepository';
+import { mapVisitsToSurveyData } from '../../repositories/surveyMapping';
+import { SurveyRenderer } from '../../survey/SurveyRenderer';
 
 interface PatientHistoryProps {
   visits: Visit[];
@@ -21,6 +24,8 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
   onEditVisit,
   onEditPrescription,
 }) => {
+  const [showSurveyView, setShowSurveyView] = useState(false);
+  const [visitSchema, setVisitSchema] = useState(() => formRepository.getForm('patient-visits'));
   const today = new Date();
   const todayISODate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   // Helper to format date into Day, Month Year, Time
@@ -53,6 +58,10 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
     return { day: dateStr.slice(0, 2), monthYear: dateStr.slice(3), time: timeStr || '09:00' };
   };
 
+  useEffect(() => formRepository.subscribe((changedId) => {
+    if (changedId === 'patient-visits') setVisitSchema(formRepository.getForm('patient-visits'));
+  }), []);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left Column: Visits (Past Visits - Read Only) */}
@@ -83,12 +92,28 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
               + Record Visit
             </button>
           )}
+          {visits.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowSurveyView((current) => !current)}
+              className="text-xs font-medium text-[#00695c] hover:underline"
+              aria-pressed={showSurveyView}
+            >
+              {showSurveyView ? 'Show timeline' : 'Survey view'}
+            </button>
+          )}
         </div>
 
         {visits.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-500">
             No clinical visits recorded yet.
           </div>
+        ) : showSurveyView ? (
+          <SurveyRenderer
+            schema={visitSchema}
+            initialData={mapVisitsToSurveyData(visits)}
+            readOnly
+          />
         ) : (
           <div className="space-y-4">
             {visits.map((visit) => {

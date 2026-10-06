@@ -331,7 +331,6 @@ export default function App() {
               <MedicationsPage
                 patients={allPatients}
                 onOpenFormBuilder={handleOpenFormBuilder}
-                showToast={showToast}
               />
             }
           />

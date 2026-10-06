@@ -33,6 +33,12 @@ test('patient profile shows visits and prescriptions loaded from the database', 
   await expect(page.getByText('Tension headache').first()).toBeVisible();
   await expect(page.getByText('Amlodipine 5mg Tablets').first()).toBeVisible();
   await expect(page.getByText('Ibuprofen 200mg Tablets').first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Survey view' }).click();
+  await expect(page.getByLabel('Visit Date')).toBeVisible();
+  await expect.poll(async () => page.getByRole('textbox', { name: 'Diagnosis' }).evaluateAll(
+    (inputs) => inputs.some((input) => (input as HTMLInputElement).value === 'Tension headache'),
+  )).toBe(true);
 });
 
 test('medications registry iterates prescriptions of all patients from the database', async ({ page }) => {
@@ -76,5 +82,10 @@ test('medications registry filters, sorts, clears filters, and exposes row actio
   await expect(page).toHaveURL(/\/patients\/p-emma-thompson$/);
   await page.goto('/medications');
   await page.getByRole('button', { name: 'View Medication Record' }).first().click();
-  await expect(page.getByText('Opening individual medication records will be available in a future update.')).toBeVisible();
+  const recordDialog = page.getByRole('dialog', { name: 'Medication Record' });
+  await expect(recordDialog).toBeVisible();
+  await expect(recordDialog.getByRole('textbox', { name: 'Medication', exact: true })).toHaveValue('Amlodipine 5mg Tablets');
+  await expect(recordDialog.getByText('Once daily', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Close medication record' }).click();
+  await expect(recordDialog).toBeHidden();
 });

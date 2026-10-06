@@ -8,6 +8,7 @@ export interface MedicationTableRow {
   startDate: string;
   endDate: string;
   status: Prescription['status'];
+  prescription: Prescription;
 }
 
 export interface MedicationFilters {
@@ -32,6 +33,7 @@ export function flattenMedicationRows(patients: Patient[]): MedicationTableRow[]
       startDate: prescription.startDate ?? '',
       endDate: prescription.endDate ?? 'Ongoing',
       status: prescription.status,
+      prescription,
     })),
   );
 }

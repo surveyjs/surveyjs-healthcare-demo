@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowUp, ArrowUpDown, Pill, Settings } from 'lucide-react';
 import { FormId } from '../types/forms';
 import { Patient, Prescription } from '../types/patient';
+import { formRepository } from '../repositories/formRepository';
+import { mapPrescriptionsToSurveyData } from '../repositories/surveyMapping';
+import { SurveyRenderer } from '../survey/SurveyRenderer';
 import {
   filterMedicationRows,
   flattenMedicationRows,
@@ -10,16 +13,12 @@ import {
   sortMedicationRows,
 } from '../utils/medicationTable';
 
-type ShowToast = (type: 'success' | 'error' | 'info', title: string, message?: string) => void;
-
 export function MedicationsPage({
   patients,
   onOpenFormBuilder,
-  showToast,
 }: {
   patients: Patient[];
   onOpenFormBuilder: (formId: FormId) => void;
-  showToast: ShowToast;
 }) {
   const [filters, setFilters] = useState<{
     patientName: string;
@@ -31,7 +30,15 @@ export function MedicationsPage({
     key: 'patientName',
     direction: 'ascending',
   });
+  const [selectedRecord, setSelectedRecord] = useState<{ patientName: string; prescription: Prescription } | null>(null);
+  const [prescriptionSchema, setPrescriptionSchema] = useState(() => formRepository.getForm('prescribed-medication'));
   const rows = sortMedicationRows(filterMedicationRows(flattenMedicationRows(patients), filters), sort.key, sort.direction);
+
+  useEffect(() => formRepository.subscribe((changedId) => {
+    if (changedId === 'prescribed-medication') {
+      setPrescriptionSchema(formRepository.getForm('prescribed-medication'));
+    }
+  }), []);
 
   const updateFilter = (key: 'patientName' | 'nhsNumber' | 'medication', value: string) => {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -186,7 +193,7 @@ export function MedicationsPage({
                       </Link>
                       <button
                         type="button"
-                        onClick={() => showToast('info', 'Medication record', 'Opening individual medication records will be available in a future update.')}
+                        onClick={() => setSelectedRecord({ patientName: row.patientName, prescription: row.prescription })}
                         className="ml-4 text-xs font-semibold text-[#00695c] hover:underline"
                       >
                         View Medication Record
@@ -199,6 +206,42 @@ export function MedicationsPage({
           </table>
         </div>
       </div>
+
+      {selectedRecord && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedRecord(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="medication-record-title"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+          >
+            <div className="mb-4 flex items-start justify-between gap-4 border-b border-gray-200 pb-3">
+              <div>
+                <h2 id="medication-record-title" className="text-lg font-bold text-gray-900">Medication Record</h2>
+                <p className="text-sm text-gray-500">{selectedRecord.patientName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedRecord(null)}
+                aria-label="Close medication record"
+                className="rounded-md px-2 py-1 text-sm font-semibold text-gray-600 hover:bg-gray-100"
+              >
+                Close
+              </button>
+            </div>
+            <SurveyRenderer
+              schema={prescriptionSchema}
+              initialData={mapPrescriptionsToSurveyData([selectedRecord.prescription])}
+              readOnly
+            />
+          </section>
+        </div>
+      )}
     </div>
   );
 }

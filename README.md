@@ -16,8 +16,8 @@ The application implements a realistic clinical workflow, split by user role:
 
 - **Patient registration** — multi-section SurveyJS form capturing demographics, address, and emergency contact
 - **Patient search & management** — filter patients by surname, birth date, or NHS number using a SurveyJS-driven search form. All filters are optional; an empty search lists every patient. Several seeded patients share the surname "Thompson", so searching for it demonstrates multi-result matching
-- **Patient profile** — basic details, contact details, visit history, and prescribed medications
-- **Practice medication overview** — browse all active and past prescriptions, filter by patient name, NHS number, medication, or status, sort the table columns, and navigate to the patient's profile
+- **Patient profile** — basic details, contact details, visit history, and prescribed medications. Visit history can be switched to a read-only SurveyJS dynamic-panel view, and today's visits remain editable by doctors.
+- **Practice medication overview** — browse all active and past prescriptions, filter by patient name, NHS number, medication, or status, sort the table columns, navigate to the patient's profile, and open an individual read-only SurveyJS medication record
 - **Edit patient / Add visit / Add or edit prescription** — modal workflows powered by the corresponding SurveyJS forms, with validation and immediate profile updates. Doctors can edit visits recorded today and active prescriptions; older visits and completed prescriptions are read-only, enforced by the API. Prescription forms can export their current values as a PDF download. Modal forms render single-column with compact spacing, all date fields use native date pickers (the visit date defaults to today and stays editable), and validation errors appear below the inputs. Saving closes the modal directly — the SurveyJS completion page is suppressed. The visit form's practitioner defaults to the signed-in doctor (via the dropdown's "Other" option when they are not among the schema's choices)
 - **Form builder** — open any application form in the embedded Survey Creator, modify it (add/remove/reorder questions, edit choices, validation, visibility logic), save the JSON, and see the updated form rendered in the app immediately
 
@@ -85,11 +85,11 @@ SurveyJS JSON → Survey Creator → edited JSON → Form Library → applicatio
 | [edit-patient.json](src/survey/schemas/edit-patient.json) | Edit Patient modal |
 | [add-new-visit.json](src/survey/schemas/add-new-visit.json) | Add Visit modal |
 | [add-new-prescription.json](src/survey/schemas/add-new-prescription.json) | Add Prescription modal |
-| [patient-visits.json](src/survey/schemas/patient-visits.json) | Visit history display |
-| [prescribed-medication.json](src/survey/schemas/prescribed-medication.json) | Medication display |
+| [patient-visits.json](src/survey/schemas/patient-visits.json) | Read-only SurveyJS visit history view on the patient profile |
+| [prescribed-medication.json](src/survey/schemas/prescribed-medication.json) | Read-only SurveyJS medication record dialog from the medications overview |
 | [login.json](src/survey/schemas/login.json) | Login page |
 
-5. **Survey ↔ domain mapping** — [surveyMapping.ts](src/repositories/surveyMapping.ts) contains the pure functions that translate between `survey.data` and the application's domain types (note: SurveyJS static panels are layout-only, so child question values arrive as flat keys, and masked inputs like the NHS number store the unmasked value).
+5. **Survey ↔ domain mapping** — [surveyMapping.ts](src/repositories/surveyMapping.ts) contains the pure functions that translate between `survey.data` and the application's domain types, including collection mappings for the visit and prescription dynamic panels (note: SurveyJS static panels are layout-only, so child question values arrive as flat keys, and masked inputs like the NHS number store the unmasked value).
 
 ## How SurveyJS Was Themed to Match the Host Application
 
