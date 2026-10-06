@@ -13,8 +13,17 @@ test('manage patients screen lists all patients from the SQLite database', async
   await expect(page.getByRole('heading', { name: 'David Miller' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Sophie Bennett' })).toBeVisible();
 
+  const emmaCard = page.getByRole('button', { name: 'Open Profile' }).filter({ hasText: 'Emma Thompson' });
+  await expect(emmaCard.getByText('Active', { exact: true })).toHaveCount(0);
+  await emmaCard.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/patients\/p-emma-thompson$/);
+  await expect(
+    page.getByRole('heading', { name: 'Emma Thompson', exact: true }).locator('..').getByText('Active', { exact: true }),
+  ).toBeVisible();
+
   // Seeded details rendered from DB rows
-  await expect(page.getByText('945 128 4567')).toBeVisible();
+  await expect(page.getByText('945 128 4567', { exact: true })).toBeVisible();
   await expect(page.getByText('12 Oakfield Road', { exact: false })).toBeVisible();
 });
 

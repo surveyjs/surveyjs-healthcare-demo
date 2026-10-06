@@ -62,7 +62,7 @@ export const RegisterPatientPage: React.FC<RegisterPatientPageProps> = ({
         {/* Main Content Area */}
         <div className="flex-1 w-full space-y-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6 sm:p-8 shadow-xs space-y-6">
-            <h2 className="text-xl font-bold text-gray-900 border-b border-gray-100 pb-4">
+            <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-3">
               Patient Registration Form
             </h2>
 
@@ -78,7 +78,7 @@ export const RegisterPatientPage: React.FC<RegisterPatientPageProps> = ({
             </div>
 
             {/* Form Action Controls matching screenshot */}
-            <div className="pt-6 border-t border-gray-150 flex flex-wrap items-center justify-between gap-4">
+            <div className="pt-6 border-t border-gray-200 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <button
                   type="button"

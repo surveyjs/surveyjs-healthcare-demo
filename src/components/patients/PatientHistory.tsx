@@ -68,7 +68,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left Column: Visits (Past Visits - Read Only) */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs flex flex-col">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+        <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
           <div className="flex items-center gap-2">
             <span className="w-4 h-4 text-gray-500">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,7 +124,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
               return (
                 <div
                   key={visit.id}
-                  className="flex items-start gap-4 p-3.5 rounded-lg border border-gray-150 bg-gray-50/50 hover:bg-gray-50 transition-colors"
+                  className="flex items-start gap-4 p-3.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:border-gray-400 hover:bg-gray-50 transition-colors"
                 >
                   {/* Date Block */}
                   <div className="w-16 shrink-0 text-center bg-white border border-gray-200 rounded-md py-2 px-1 shadow-2xs">
@@ -157,7 +157,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 border-t border-gray-200/60">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 border-t border-gray-200">
                       {visit.diagnosis && (
                         <div>
                           <span className="text-gray-500 font-medium">Diagnosis:</span>{' '}
@@ -209,7 +209,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
 
       {/* Right Column: Prescribed Medication (Active & Past) */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs flex flex-col">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+        <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
           <div className="flex items-center gap-2">
             <Pill className="w-4 h-4 text-teal-700" />
             <h2 className="text-base font-bold text-gray-900">
@@ -239,7 +239,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
               return (
                 <div
                   key={rx.id}
-                  className="flex items-start gap-4 p-4 rounded-lg border border-gray-150 bg-white shadow-2xs hover:border-teal-200 transition-colors"
+                  className="flex items-start gap-4 p-4 rounded-lg border border-gray-200 bg-white shadow-2xs hover:border-gray-400 transition-colors"
                 >
                   {/* Pill Icon badge */}
                   <div

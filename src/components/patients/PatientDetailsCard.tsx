@@ -141,7 +141,7 @@ export const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Basic Details */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-4">
-          <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">
+          <h2 className="text-base font-bold text-gray-900 border-b border-gray-200 pb-3">
             Basic Details
           </h2>
 
@@ -171,7 +171,7 @@ export const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
 
         {/* Contact Details */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-4">
-          <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">
+          <h2 className="text-base font-bold text-gray-900 border-b border-gray-200 pb-3">
             Contact Details
           </h2>
 

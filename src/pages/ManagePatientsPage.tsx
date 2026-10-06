@@ -105,7 +105,7 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
         <div className="flex-1 w-full space-y-6">
           {/* Search Card */}
           <div className="bg-white border border-gray-200 rounded-lg p-6 sm:p-8 shadow-xs space-y-6">
-            <h2 className="text-xl font-bold text-gray-900 border-b border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-3">
               Search for a Patient
             </h2>
 
@@ -125,7 +125,7 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
             </div>
 
             {/* Search Actions matching screenshot */}
-            <div className="pt-6 border-t border-gray-150 flex flex-wrap items-center justify-between gap-4">
+            <div className="pt-6 border-t border-gray-200 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <button
                   type="button"

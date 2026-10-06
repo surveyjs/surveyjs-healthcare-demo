@@ -85,7 +85,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
           />
 
           {onOpenBuilder && (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+            <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
               <button
                 type="button"
                 onClick={() => onOpenBuilder('edit-patient')}

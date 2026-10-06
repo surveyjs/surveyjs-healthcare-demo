@@ -72,7 +72,7 @@ function AppointmentRequestsPanel() {
 
   return (
     <section className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-4">
-      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+      <div className="flex items-center justify-between border-b border-gray-200 pb-3">
         <div>
           <h2 className="text-base font-bold text-gray-900">Appointment Requests</h2>
           <p className="text-xs text-gray-500 mt-1">Requests submitted through the patient portal.</p>
@@ -253,7 +253,7 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Form Schema Management Card */}
               <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-[#00695c]" />
                     SurveyJS Schemas
@@ -265,7 +265,7 @@ export default function App() {
                   {FORM_METADATA_LIST.map((form) => (
                     <div
                       key={form.id}
-                      className="p-3.5 rounded-lg border border-gray-150 hover:border-teal-300 transition-colors flex items-center justify-between gap-4"
+                      className="p-3.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors flex items-center justify-between gap-4"
                     >
                       <div className="space-y-0.5">
                         <div className="text-sm font-bold text-gray-900">{form.title}</div>
@@ -287,7 +287,7 @@ export default function App() {
               {/* Clinic Roster & Data Controls */}
               <div className="space-y-6">
                 <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-4">
-                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3">
+                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-3">
                     <Users className="w-4 h-4 text-[#00695c]" />
                     Authorized Clinical Practitioners
                   </h2>
