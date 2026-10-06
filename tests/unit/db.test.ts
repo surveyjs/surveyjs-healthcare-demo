@@ -99,6 +99,44 @@ describe('healthcare SQLite db', () => {
     expect(emma.visits[0].id).toBe(visit.id);
   });
 
+  it('updates a visit dated today without changing its id or order', () => {
+    const date = new Date();
+    const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const visit = db.addVisit('p-emma-thompson', {
+      id: 'today-visit',
+      visitDate: today,
+      visitTime: '09:00',
+      visitType: 'GP Consultation',
+      practitioner: 'Dr. Smith',
+      reasonForVisit: 'Initial reason',
+    })!;
+
+    const updated = db.updateVisit('p-emma-thompson', visit.id, {
+      ...visit,
+      reasonForVisit: 'Updated reason',
+      diagnosis: 'Reviewed',
+    });
+
+    expect(updated?.id).toBe(visit.id);
+    expect(db.getPatient('p-emma-thompson')!.visits[0]).toMatchObject({
+      id: visit.id,
+      reasonForVisit: 'Updated reason',
+      diagnosis: 'Reviewed',
+    });
+  });
+
+  it('does not update visits that are not dated today or do not exist', () => {
+    const visit = db.getPatient('p-emma-thompson')!.visits[0];
+    expect(db.updateVisit('p-emma-thompson', visit.id, { ...visit, diagnosis: 'Changed' })).toBeUndefined();
+    expect(db.updateVisit('p-emma-thompson', 'missing', { ...visit, visitDate: '2024-06-01' })).toBeUndefined();
+
+    const date = new Date();
+    const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const todayVisit = db.addVisit('p-emma-thompson', { ...visit, id: 'mutable-date', visitDate: today })!;
+    expect(db.updateVisit('p-emma-thompson', todayVisit.id, { ...todayVisit, visitDate: '2024-06-01' })).toBeUndefined();
+    expect(db.getPatient('p-emma-thompson')!.visits[0].visitDate).toBe(today);
+  });
+
   it('removes a visit and reports whether anything was deleted', () => {
     expect(db.removeVisit('p-emma-thompson', 'v2')).toBe(true);
     expect(db.getPatient('p-emma-thompson')!.visits.map((v) => v.id)).toEqual(['v1', 'v3']);

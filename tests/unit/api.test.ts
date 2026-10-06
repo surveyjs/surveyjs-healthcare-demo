@@ -118,6 +118,47 @@ describe('patients API', () => {
     expect(patient.visits).toHaveLength(2);
   });
 
+  it('PUT /api/patients/:id/visits/:visitId edits only visits dated today', async () => {
+    await api('/admin/reset', { method: 'POST' });
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const created = await api('/patients/p-david-miller/visits', {
+      method: 'POST',
+      body: JSON.stringify({ visitDate: today, visitTime: '09:00', visitType: 'Consultation', practitioner: 'Dr. Jones' }),
+    });
+    const { visit } = await created.json();
+
+    const tomorrowDate = new Date(now);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrow = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, '0')}-${String(tomorrowDate.getDate()).padStart(2, '0')}`;
+    const changedDate = await api(`/patients/p-david-miller/visits/${visit.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...visit, visitDate: tomorrow }),
+    });
+    expect(changedDate.status).toBe(400);
+
+    const updated = await api(`/patients/p-david-miller/visits/${visit.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...visit, reasonForVisit: 'Edited in API test' }),
+    });
+    expect(updated.status).toBe(200);
+    const response = await updated.json();
+    expect(response.visit).toMatchObject({ id: visit.id, reasonForVisit: 'Edited in API test' });
+    expect(response.patient.visits[0].id).toBe(visit.id);
+
+    const oldVisit = await api('/patients/p-emma-thompson/visits/v2', {
+      method: 'PUT',
+      body: JSON.stringify({ visitDate: today, visitType: 'Consultation', practitioner: 'Dr. Smith' }),
+    });
+    expect(oldVisit.status).toBe(400);
+
+    const missing = await api('/patients/p-david-miller/visits/missing', {
+      method: 'PUT',
+      body: JSON.stringify({ visitDate: today }),
+    });
+    expect(missing.status).toBe(404);
+  });
+
   it('DELETE /api/patients/:id/visits/:visitId revokes a visit and 404s for missing', async () => {
     await api('/admin/reset', { method: 'POST' });
     const res = await api('/patients/p-emma-thompson/visits/v2', { method: 'DELETE' });

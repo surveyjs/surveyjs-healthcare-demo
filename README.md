@@ -17,7 +17,7 @@ The application implements a realistic clinical workflow, split by user role:
 - **Patient registration** — multi-section SurveyJS form capturing demographics, address, and emergency contact
 - **Patient search & management** — filter patients by surname, birth date, or NHS number using a SurveyJS-driven search form. All filters are optional; an empty search lists every patient. Several seeded patients share the surname "Thompson", so searching for it demonstrates multi-result matching
 - **Patient profile** — basic details, contact details, visit history, and prescribed medications
-- **Edit patient / Add visit / Add prescription** — modal workflows powered by the corresponding SurveyJS forms, with validation and immediate profile updates. Modal forms render single-column with compact spacing, all date fields use native date pickers (the visit date defaults to today and stays editable), and validation errors appear below the inputs. Saving closes the modal directly — the SurveyJS completion page is suppressed. The visit form's practitioner defaults to the signed-in doctor (via the dropdown's "Other" option when they are not among the schema's choices)
+- **Edit patient / Add visit / Add prescription** — modal workflows powered by the corresponding SurveyJS forms, with validation and immediate profile updates. Doctors can edit visits recorded today; older visits are read-only. The API enforces the same-day rule. Modal forms render single-column with compact spacing, all date fields use native date pickers (the visit date defaults to today and stays editable), and validation errors appear below the inputs. Saving closes the modal directly — the SurveyJS completion page is suppressed. The visit form's practitioner defaults to the signed-in doctor (via the dropdown's "Other" option when they are not among the schema's choices)
 - **Form builder** — open any application form in the embedded Survey Creator, modify it (add/remove/reorder questions, edit choices, validation, visibility logic), save the JSON, and see the updated form rendered in the app immediately
 
 ### Patient portal use cases
@@ -111,6 +111,7 @@ Persistence is a real client–server setup:
   - [formRepository.ts](src/repositories/formRepository.ts) persists **only schema overrides** edited in the Survey Creator (the `form_schemas` table); the default schemas stay in the bundled JSON. `formRepository.init()` preloads overrides in [main.tsx](src/main.tsx) before the first render so `getForm()` remains synchronous.
   - [authRepository.ts](src/repositories/authRepository.ts) calls `POST /api/auth/login` / `GET /api/auth/roster` and keeps the session in `sessionStorage`/`localStorage` (key `hc-auth-user`). Passwords are stored as hashes server-side.
 - **Ordering** — visits and prescriptions use a `seq` column (newest = highest, `ORDER BY seq DESC`) so newly added records appear first.
+- **Visit updates** — `PUT /api/patients/:id/visits/:visitId` updates a visit in place only when both its saved date and submitted date are today; other visit updates are rejected.
 - **Test isolation** — e2e tests reset database state via `POST /api/admin/reset`; unit tests run the same `db.ts` against an in-memory SQLite database.
 
 Because all storage goes through the repositories, the SQLite backend could be swapped for any other API/database without touching the UI.

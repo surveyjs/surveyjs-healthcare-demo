@@ -115,8 +115,10 @@ test('adding a visit via the SurveyJS modal persists it to SQLite', async ({ pag
 
   // Visit Date is a native date input, prefilled with today and editable
   const visitDate = page.getByRole('textbox', { name: 'Visit Date' });
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   await expect(visitDate).toHaveAttribute('type', 'date');
-  await expect(visitDate).toHaveValue(new Date().toISOString().split('T')[0]);
+  await expect(visitDate).toHaveValue(today);
   await visitDate.fill('2026-01-15');
 
   // Modal forms are single-column: Visit Time renders below Visit Date
@@ -134,6 +136,32 @@ test('adding a visit via the SurveyJS modal persists it to SQLite', async ({ pag
   await openEmmaProfile(page);
   await expect(page.getByText('Annual wellbeing review').first()).toBeVisible();
   await expect(page.getByText('Jan 2026').first()).toBeVisible();
+});
+
+test('doctors can edit visits from today but not older visits', async ({ page }) => {
+  await openEmmaProfile(page);
+  await expect(page.getByRole('button', { name: 'Edit visit' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Add New Visit' }).click();
+  const today = new Date();
+  const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  await expect(page.getByRole('textbox', { name: 'Visit Date' })).toHaveValue(todayValue);
+  await page.getByRole('textbox', { name: 'Reason for Visit' }).fill('Visit to edit');
+  await page.getByRole('button', { name: 'Save Visit' }).click();
+
+  const editButton = page.getByRole('button', { name: 'Edit visit' });
+  await expect(editButton).toBeVisible();
+  await editButton.click();
+
+  await expect(page.getByRole('heading', { name: 'Edit Visit' })).toBeVisible();
+  const reason = page.getByRole('textbox', { name: 'Reason for Visit' });
+  await expect(reason).toHaveValue('Visit to edit');
+  await reason.fill('Updated same-day visit');
+  await page.getByRole('button', { name: 'Save Changes' }).click();
+
+  await expect(page.getByText('Visit updated').first()).toBeVisible();
+  await expect(page.getByText('Updated same-day visit').first()).toBeVisible();
+  await expect(page.getByText('Visit to edit', { exact: true })).toHaveCount(0);
 });
 
 test('validation errors appear below the input', async ({ page }) => {

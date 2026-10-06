@@ -6,7 +6,7 @@ import { EditPatientModal } from '../components/modals/EditPatientModal';
 import { AddVisitModal } from '../components/modals/AddVisitModal';
 import { AddPrescriptionModal } from '../components/modals/AddPrescriptionModal';
 import { patientRepository } from '../repositories/patientRepository';
-import { Patient } from '../types/patient';
+import { Patient, Visit } from '../types/patient';
 import { FormId } from '../types/forms';
 import { ArrowLeft } from 'lucide-react';
 
@@ -31,6 +31,7 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
+  const [visitBeingEdited, setVisitBeingEdited] = useState<Visit | null>(null);
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
 
   // Load patient from the database
@@ -94,6 +95,21 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
     }
   };
 
+  const openNewVisitModal = () => {
+    setVisitBeingEdited(null);
+    setIsVisitModalOpen(true);
+  };
+
+  const openEditVisitModal = (visit: Visit) => {
+    setVisitBeingEdited(visit);
+    setIsVisitModalOpen(true);
+  };
+
+  const closeVisitModal = () => {
+    setIsVisitModalOpen(false);
+    setVisitBeingEdited(null);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col lg:flex-row gap-8 items-start">
@@ -109,7 +125,7 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
           <PatientDetailsCard
             patient={patient}
             onEditPatient={() => setIsEditModalOpen(true)}
-            onAddVisit={() => setIsVisitModalOpen(true)}
+            onAddVisit={openNewVisitModal}
             onAddPrescription={isPatientViewer ? undefined : () => setIsPrescriptionModalOpen(true)}
           />
 
@@ -117,9 +133,10 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
           <PatientHistory
             visits={patient.visits || []}
             prescriptions={patient.prescriptions || []}
-            onOpenVisitModal={() => setIsVisitModalOpen(true)}
+            onOpenVisitModal={openNewVisitModal}
             onOpenPrescriptionModal={isPatientViewer ? undefined : () => setIsPrescriptionModalOpen(true)}
             onRevokeVisit={isPatientViewer ? handleRevokeVisit : undefined}
+            onEditVisit={isPatientViewer ? undefined : openEditVisitModal}
           />
         </div>
       </div>
@@ -147,10 +164,15 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
       <AddVisitModal
         isOpen={isVisitModalOpen}
         patient={patient}
-        onClose={() => setIsVisitModalOpen(false)}
+        visit={visitBeingEdited}
+        onClose={closeVisitModal}
         onSaved={(updated) => {
           setPatient(updated);
-          showToast('success', 'Visit recorded', 'Clinical encounter added to patient history.');
+          showToast(
+            'success',
+            visitBeingEdited ? 'Visit updated' : 'Visit recorded',
+            visitBeingEdited ? 'Clinical encounter updated.' : 'Clinical encounter added to patient history.',
+          );
         }}
         onOpenBuilder={
           onOpenFormBuilder

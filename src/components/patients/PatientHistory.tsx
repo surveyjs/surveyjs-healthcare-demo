@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pill, Clock, Trash2 } from 'lucide-react';
+import { Pill, Clock, Trash2, Pencil } from 'lucide-react';
 import { Visit, Prescription } from '../../types/patient';
 
 interface PatientHistoryProps {
@@ -8,6 +8,7 @@ interface PatientHistoryProps {
   onOpenVisitModal?: () => void;
   onOpenPrescriptionModal?: () => void;
   onRevokeVisit?: (visitId: string) => void;
+  onEditVisit?: (visit: Visit) => void;
 }
 
 export const PatientHistory: React.FC<PatientHistoryProps> = ({
@@ -16,7 +17,10 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
   onOpenVisitModal,
   onOpenPrescriptionModal,
   onRevokeVisit,
+  onEditVisit,
 }) => {
+  const today = new Date();
+  const todayISODate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   // Helper to format date into Day, Month Year, Time
   const parseVisitDate = (dateStr?: string, timeStr?: string) => {
     if (!dateStr) return { day: '01', monthYear: 'Jan 2024', time: timeStr || '09:00' };
@@ -140,16 +144,32 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
                     </div>
                   </div>
 
-                  {onRevokeVisit && (
-                    <button
-                      type="button"
-                      onClick={() => onRevokeVisit(visit.id)}
-                      className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
-                      title="Revoke this visit"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Revoke</span>
-                    </button>
+                  {(onRevokeVisit || (onEditVisit && visit.visitDate === todayISODate)) && (
+                    <div className="shrink-0 flex items-center gap-3">
+                      {onEditVisit && visit.visitDate === todayISODate && (
+                        <button
+                          type="button"
+                          onClick={() => onEditVisit(visit)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-[#00695c] hover:underline cursor-pointer"
+                          aria-label="Edit visit"
+                          title="Edit this visit"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                      {onRevokeVisit && (
+                        <button
+                          type="button"
+                          onClick={() => onRevokeVisit(visit.id)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                          title="Revoke this visit"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Revoke</span>
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               );

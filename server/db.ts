@@ -141,6 +141,15 @@ export function createDb(dbPath: string) {
     )
   `);
 
+  const updateVisitStmt = db.prepare(`
+    UPDATE visits SET
+      visit_date = @visitDate, visit_time = @visitTime, visit_type = @visitType,
+      practitioner = @practitioner, reason_for_visit = @reasonForVisit, diagnosis = @diagnosis,
+      treatment_recommendations = @treatmentRecommendations, follow_up_date = @followUpDate,
+      symptoms_notes = @symptomsNotes, internal_notes = @internalNotes
+    WHERE patient_id = @patientId AND id = @id AND visit_date = @today
+  `);
+
   const insertPrescriptionStmt = db.prepare(`
     INSERT INTO prescriptions (
       id, patient_id, medication, frequency, dosage, unit, start_date, end_date, instructions, status, seq
@@ -289,6 +298,13 @@ export function createDb(dbPath: string) {
     return r.s;
   }
 
+  function todayISODate(): string {
+    const date = new Date();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+  }
+
   const insertFullPatient = db.transaction((patient: Patient, seq: number) => {
     insertPatientStmt.run(patientToParams(patient, seq));
     const visits = patient.visits || [];
@@ -404,6 +420,15 @@ export function createDb(dbPath: string) {
       const withId: Visit = { ...visit, id: visit.id || `v-${Date.now()}` };
       insertVisitStmt.run(visitToParams(patientId, withId, nextSeq('visits', patientId)));
       return withId;
+    },
+
+    updateVisit(patientId: string, visitId: string, visit: Visit): Visit | undefined {
+      const today = todayISODate();
+      if (visit.visitDate !== today) return undefined;
+      const withId: Visit = { ...visit, id: visitId };
+      const params = visitToParams(patientId, withId, 0);
+      const result = updateVisitStmt.run({ ...params, today });
+      return result.changes > 0 ? withId : undefined;
     },
 
     addPrescription(patientId: string, rx: Prescription): Prescription | undefined {

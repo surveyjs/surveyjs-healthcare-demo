@@ -84,6 +84,35 @@ export function createApp(db: HealthcareDb): Express {
     res.status(201).json({ visit, patient: db.getPatient(req.params.id) });
   });
 
+  app.put('/api/patients/:id/visits/:visitId', (req, res) => {
+    const body = req.body;
+    if (!body || typeof body !== 'object' || typeof body.visitDate !== 'string') {
+      res.status(400).json({ error: 'A visit with a visitDate is required' });
+      return;
+    }
+
+    const patient = db.getPatient(req.params.id);
+    const existingVisit = patient?.visits.find((visit) => visit.id === req.params.visitId);
+    if (!existingVisit) {
+      res.status(404).json({ error: 'Visit not found' });
+      return;
+    }
+
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (existingVisit.visitDate !== today || body.visitDate !== today) {
+      res.status(400).json({ error: 'Only visits dated today can be edited' });
+      return;
+    }
+
+    const visit = db.updateVisit(req.params.id, req.params.visitId, body);
+    if (!visit) {
+      res.status(404).json({ error: 'Visit not found or no longer editable' });
+      return;
+    }
+    res.json({ visit, patient: db.getPatient(req.params.id) });
+  });
+
   app.delete('/api/patients/:id/visits/:visitId', (req, res) => {
     const removed = db.removeVisit(req.params.id, req.params.visitId);
     if (!removed) {

@@ -4,6 +4,7 @@ import {
   mergeSurveyIntoPatient,
   mapPatientToSurveyData,
   mapSurveyToVisit,
+  mapVisitToSurveyData,
   mapSurveyToPrescription,
 } from '../../src/repositories/surveyMapping';
 import { Patient } from '../../src/types/patient';
@@ -134,6 +135,26 @@ describe('mapSurveyToVisit', () => {
   it('falls back to the default practitioner when "Other" has no comment', () => {
     const visit = mapSurveyToVisit({ practitioner: 'other', 'practitioner-Comment': '  ' });
     expect(visit.practitioner).toBe('Dr. Sarah Miller');
+  });
+
+  it('maps a visit back to the add-visit survey values', () => {
+    const visit = mapSurveyToVisit({
+      visit_date: '2026-10-06',
+      visit_time: '09:30',
+      visit_type: 'follow_up',
+      practitioner: 'dr_jones',
+      reason_for_visit: 'BP check',
+      diagnosis: 'Stable',
+    });
+
+    expect(mapVisitToSurveyData(visit)).toMatchObject({
+      visit_date: '2026-10-06',
+      visit_time: '09:30',
+      visit_type: 'follow_up',
+      practitioner: 'dr_jones',
+      reason_for_visit: 'BP check',
+      diagnosis: 'Stable',
+    });
   });
 });
 

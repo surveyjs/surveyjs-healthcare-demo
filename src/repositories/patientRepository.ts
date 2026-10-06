@@ -4,6 +4,7 @@ import {
   mergeSurveyIntoPatient,
   mapPatientToSurveyData,
   mapSurveyToVisit,
+  mapVisitToSurveyData,
   mapSurveyToPrescription,
 } from './surveyMapping';
 
@@ -77,6 +78,20 @@ export const patientRepository = {
     );
     notifyListeners();
     return result.visit;
+  },
+
+  async updateVisit(patientId: string, visitId: string, visitData: Record<string, any>): Promise<Visit> {
+    const visit = { ...mapSurveyToVisit(visitData), id: visitId };
+    const result = await request<{ visit: Visit; patient: Patient }>(
+      `/patients/${encodeURIComponent(patientId)}/visits/${encodeURIComponent(visitId)}`,
+      { method: 'PUT', body: JSON.stringify(visit) },
+    );
+    notifyListeners();
+    return result.visit;
+  },
+
+  mapVisitToSurveyData(visit: Visit): Record<string, any> {
+    return mapVisitToSurveyData(visit);
   },
 
   async removeVisit(patientId: string, visitId: string): Promise<void> {
