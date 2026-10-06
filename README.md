@@ -9,7 +9,7 @@ The application implements a realistic clinical workflow, split by user role:
 
 ### Authentication & roles
 
-- **Login** — the login screen itself is a SurveyJS form ([login.json](src/survey/schemas/login.json)). A "quick sign-in" dropdown is populated live from the API via `choicesByUrl`, and SurveyJS triggers (`copyvalue` / `setvalue`) prefill the credentials. Failed logins keep the form active by cancelling `onCompleting`.
+- **Login** — the login screen uses the shared Healthcare wordmark and a SurveyJS form ([login.json](src/survey/schemas/login.json)). A "quick sign-in" dropdown is populated live from the API via `choicesByUrl`, and SurveyJS triggers (`copyvalue` / `setvalue`) prefill the credentials. Failed logins keep the form active by cancelling `onCompleting`.
 - **Role-based UI** — doctors get the full patient-management experience; patient accounts get a restricted portal showing only their own profile and read-only history, with staff management controls hidden.
 
 ### Doctor / staff use cases
@@ -42,6 +42,8 @@ Every view has its own URL (client-side routing via `react-router-dom`), so brow
 | `/my-profile` | Patient portal (own record) | patient |
 
 Unauthenticated visitors are redirected to `/login`; unknown URLs redirect to the role's home view (`/manage` for staff, `/my-profile` for patients). Patients hitting staff URLs are redirected to `/my-profile`.
+
+The shared header follows the approved healthcare navigation design: brand wordmark, role-appropriate route links with an active-page indicator, the signed-in user's name, and sign-out. On narrow screens, navigation remains horizontally scrollable while identity and sign-out stay available.
 
 ## Technology Stack
 

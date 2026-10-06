@@ -189,7 +189,7 @@ test('adding a prescription via the SurveyJS modal persists it to SQLite', async
 
   // Also visible in the cross-patient medications registry after reload
   await page.goto('/');
-  await page.getByRole('link', { name: 'Medications' }).click();
+  await page.getByRole('link', { name: 'Medication', exact: true }).click();
   await expect(page.getByRole('cell', { name: /Paracetamol 500mg Tablets/ })).toBeVisible();
 });
 

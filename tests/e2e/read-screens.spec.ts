@@ -52,7 +52,7 @@ test('patient profile shows visits and prescriptions loaded from the database', 
 
 test('medications registry iterates prescriptions of all patients from the database', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Medications' }).click();
+  await page.getByRole('link', { name: 'Medication', exact: true }).click();
 
   await expect(page.getByText('Practice Medication Overview')).toBeVisible();
   await expect(page.getByRole('cell', { name: /Amlodipine 5mg Tablets/ })).toBeVisible();

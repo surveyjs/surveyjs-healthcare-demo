@@ -49,11 +49,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4 py-10">
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-[#00695c] flex items-center justify-center text-white shadow-xs">
-            <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 10.5h-5.5V5c0-.55-.45-1-1-1s-1 .45-1 1v5.5H6c-.55 0-1 .45-1 1s.45 1 1 1h5.5V19c0 .55.45 1 1 1s1-.45 1-1v-5.5H19c.55 0 1-.45 1-1s-.45-1-1-1z" />
-            </svg>
-          </div>
+          <img alt="Healthcare" className="h-6 w-[139px]" src="/healthcare-logo.svg" />
           <h1 className="text-2xl font-bold text-gray-900">Clinic Portal</h1>
           <p className="text-sm text-gray-500 text-center">
             Sign in to manage patients, visits, and prescriptions.

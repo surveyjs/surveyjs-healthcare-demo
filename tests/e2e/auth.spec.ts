@@ -7,6 +7,7 @@ test.beforeEach(async ({ request }) => {
 test('app is gated by the login screen', async ({ page }) => {
   await page.goto('/');
 
+  await expect(page.getByRole('img', { name: 'Healthcare' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Clinic Portal' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
   // No patient data before signing in
@@ -25,7 +26,7 @@ test('roster quick sign-in fills credentials and logs in a doctor', async ({ pag
 
   await page.getByRole('button', { name: 'Sign In' }).click();
 
-  await expect(page.getByText('Logged in as:')).toBeVisible();
+  await expect(page.getByText('Logged as:')).toBeVisible();
   await expect(page.getByText('Dr. Sarah Miller').first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
 });
@@ -37,7 +38,7 @@ test('a patient from the roster can sign in with manual credentials', async ({ p
   await page.getByPlaceholder('Enter your password').fill('demo1234');
   await page.getByRole('button', { name: 'Sign In' }).click();
 
-  await expect(page.getByText('Logged in as:')).toBeVisible();
+  await expect(page.getByText('Logged as:')).toBeVisible();
   await expect(page.getByText('Emma Thompson').first()).toBeVisible();
 });
 

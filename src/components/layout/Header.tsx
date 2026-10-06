@@ -13,91 +13,96 @@ interface HeaderProps {
 }
 
 const ACTIVE_CLASSES =
-  'text-[#00695c] font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#00695c]';
+  'text-[#006b5c] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#006b5c]';
 
 const navLinkClass = (isActive: boolean, inactiveClasses: string) =>
-  `text-sm font-medium transition-colors cursor-pointer relative py-4 ${
+  `relative flex h-8 shrink-0 items-center whitespace-nowrap text-sm font-semibold transition-colors sm:h-14 ${
     isActive ? ACTIVE_CLASSES : inactiveClasses
   }`;
 
 export const Header: React.FC<HeaderProps> = ({ activeTab, userName, role = 'doctor', onLogout }) => {
+  const patientProfileIsActive = role === 'patient' && activeTab === 'profile';
+
   return (
-    <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-        {/* Left identity group */}
-        <div className="flex items-center space-x-4">
-          {/* Green circular cross logo matching screenshot */}
-          <div className="w-8 h-8 rounded-full bg-[#00695c] flex items-center justify-center text-white shadow-xs shrink-0">
-            <svg
-              className="w-5 h-5 fill-current"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
+    <header className="sticky top-0 z-30 w-full border-b border-gray-200 bg-white">
+      <div className="mx-auto flex min-h-14 max-w-[1220px] flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 sm:flex-nowrap sm:px-8 sm:py-0">
+        <Link
+          to={role === 'patient' ? '/my-profile' : '/manage'}
+          aria-label="Healthcare home"
+          className="order-1 block h-6 w-[139px] shrink-0"
+        >
+          <img alt="" aria-hidden="true" className="block h-6 w-[139px]" src="/healthcare-logo.svg" />
+        </Link>
+
+        <div aria-hidden="true" className="hidden h-5 w-px shrink-0 bg-[#d0d5dd] sm:block" />
+
+        <nav
+          aria-label="Primary navigation"
+          className="order-3 flex h-8 min-w-0 w-full items-center gap-5 overflow-x-auto sm:order-2 sm:h-14 sm:w-auto sm:flex-1"
+        >
+          {role === 'patient' ? (
+            <Link
+              to="/my-profile"
+              aria-current={patientProfileIsActive ? 'page' : undefined}
+              className={navLinkClass(patientProfileIsActive, 'text-[#98a1af] hover:text-[#475567]')}
             >
-              <path d="M19 10.5h-5.5V5c0-.55-.45-1-1-1s-1 .45-1 1v5.5H6c-.55 0-1 .45-1 1s.45 1 1 1h5.5V19c0 .55.45 1 1 1s1-.45 1-1v-5.5H19c.55 0 1-.45 1-1s-.45-1-1-1z" />
-            </svg>
-          </div>
-
-          <div className="text-sm text-gray-700">
-            Logged in as: <span className="font-semibold text-[#00695c]">{userName}</span>
-          </div>
-
-          <div className="h-5 w-px bg-gray-300" />
-
-          {/* Navigation items */}
-          <nav className="flex items-center space-x-6">
-            {role === 'patient' ? (
+              My Profile
+            </Link>
+          ) : (
+            <>
               <Link
-                to="/my-profile"
-                className="text-sm font-semibold text-[#00695c] transition-colors cursor-pointer relative py-4 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#00695c]"
+                to="/register"
+                aria-current={activeTab === 'register' ? 'page' : undefined}
+                className={navLinkClass(activeTab === 'register', 'text-[#98a1af] hover:text-[#475567]')}
               >
-                My Profile
+                Register Patient
               </Link>
-            ) : (
-              <>
-                <Link
-                  to="/register"
-                  className={navLinkClass(activeTab === 'register', 'text-gray-600 hover:text-gray-900')}
-                >
-                  Register Patient
-                </Link>
 
-                <Link
-                  to="/manage"
-                  className={navLinkClass(
-                    activeTab === 'manage' || activeTab === 'profile',
-                    'text-gray-600 hover:text-gray-900',
-                  )}
-                >
-                  Manage Patients
-                </Link>
+              <Link
+                to="/manage"
+                aria-current={activeTab === 'manage' || activeTab === 'profile' ? 'page' : undefined}
+                className={navLinkClass(
+                  activeTab === 'manage' || activeTab === 'profile',
+                  'text-[#98a1af] hover:text-[#475567]',
+                )}
+              >
+                Manage Patients
+              </Link>
 
-                <Link
-                  to="/medications"
-                  className={navLinkClass(activeTab === 'medications', 'text-gray-400 hover:text-gray-600')}
-                >
-                  Medications
-                </Link>
+              <Link
+                to="/medications"
+                aria-current={activeTab === 'medications' ? 'page' : undefined}
+                className={navLinkClass(activeTab === 'medications', 'text-[#98a1af] hover:text-[#475567]')}
+              >
+                Medication
+              </Link>
 
-                <Link
-                  to="/settings"
-                  className={navLinkClass(activeTab === 'settings', 'text-gray-400 hover:text-gray-600')}
-                >
-                  Inpatient Settings
-                </Link>
-              </>
-            )}
-          </nav>
-        </div>
+              <Link
+                to="/settings"
+                aria-current={activeTab === 'settings' ? 'page' : undefined}
+                className={navLinkClass(activeTab === 'settings', 'text-[#98a1af] hover:text-[#475567]')}
+              >
+                Inpatient Settings
+              </Link>
+            </>
+          )}
+        </nav>
 
-        {/* Right action */}
-        <div className="flex items-center">
+        <div className="order-2 ml-auto flex shrink-0 items-center gap-2 text-sm font-semibold sm:order-3 sm:gap-5">
+          <div className="flex items-center gap-2 whitespace-nowrap leading-5">
+            <span className="hidden text-[#98a1af] md:inline">Logged as:</span>
+            <span className="text-xs text-[#475567] sm:text-sm">{userName}</span>
+          </div>
+          <div aria-hidden="true" className="hidden h-5 w-px shrink-0 bg-[#d0d5dd] sm:block" />
           <button
             type="button"
             onClick={onLogout}
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-[#00695c] transition-colors cursor-pointer"
+            aria-label="Log Out"
+            title="Log Out"
+            className="flex items-center gap-1 text-sm font-semibold text-[#475567] transition-colors hover:text-[#006b5c]"
           >
-            <LogOut className="w-4 h-4" />
-            <span>Log out</span>
+            <LogOut aria-hidden="true" className="h-[18px] w-[18px]" />
+            <span className="hidden sm:inline">Log Out</span>
           </button>
         </div>
       </div>

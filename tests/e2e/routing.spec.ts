@@ -43,16 +43,23 @@ test.describe('staff routes', () => {
   test('header navigation updates the URL for every view', async ({ page }) => {
     await page.goto('/');
 
+    await expect(page.getByRole('link', { name: 'Healthcare home' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Manage Patients' })).toHaveAttribute('aria-current', 'page');
+
     await page.getByRole('link', { name: 'Register Patient' }).click();
     await expect(page).toHaveURL(/\/register$/);
+    await expect(page.getByRole('link', { name: 'Register Patient' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { name: 'Register Patient' })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Medications' }).click();
+    await page.getByRole('link', { name: 'Medication', exact: true }).click();
     await expect(page).toHaveURL(/\/medications$/);
+    await expect(page.getByRole('link', { name: 'Medication', exact: true })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByText('Practice Medication Overview')).toBeVisible();
 
     await page.getByRole('link', { name: 'Inpatient Settings' }).click();
     await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole('link', { name: 'Inpatient Settings' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByText('Inpatient & Clinical Settings')).toBeVisible();
 
     await page.getByRole('link', { name: 'Manage Patients' }).click();
@@ -85,7 +92,7 @@ test.describe('staff routes', () => {
     await page.goto('/manage');
     await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Medications' }).click();
+    await page.getByRole('link', { name: 'Medication', exact: true }).click();
     await expect(page).toHaveURL(/\/medications$/);
 
     await page.goBack();
@@ -123,11 +130,13 @@ test.describe('patient portal routes', () => {
     await expect(page.getByText('Emma Thompson').first()).toBeVisible();
     // Staff navigation is not offered to patients
     await expect(page.getByRole('link', { name: 'Manage Patients' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Healthcare home' })).toBeVisible();
   });
 
   test('/my-profile deep link opens the patient own record', async ({ page }) => {
     await page.goto('/my-profile');
     await expect(page).toHaveURL(/\/my-profile$/);
+    await expect(page.getByRole('link', { name: 'My Profile' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByText('Emma Thompson').first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'My Profile' })).toBeVisible();
   });
