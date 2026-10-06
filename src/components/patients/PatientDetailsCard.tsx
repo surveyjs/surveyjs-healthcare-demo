@@ -4,9 +4,11 @@ import { Patient } from '../../types/patient';
 
 interface PatientDetailsCardProps {
   patient: Patient;
-  onEditPatient: () => void;
-  onAddVisit: () => void;
+  onEditPatient?: () => void;
+  onAddVisit?: () => void;
   onAddPrescription?: () => void;
+  onRequestAppointment?: () => void;
+  showStatus?: boolean;
 }
 
 export const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
@@ -14,6 +16,8 @@ export const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
   onEditPatient,
   onAddVisit,
   onAddPrescription,
+  onRequestAppointment,
+  showStatus = true,
 }) => {
   const initials = `${patient.firstName?.[0] || ''}${patient.lastName?.[0] || ''}`.toUpperCase();
 
@@ -66,9 +70,11 @@ export const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
               <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
                 {patient.firstName} {patient.lastName}
               </h1>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold tracking-wide">
-                {patient.status || 'Active'}
-              </span>
+              {showStatus && (
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold tracking-wide">
+                  {patient.status || 'Active'}
+                </span>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 font-medium">
@@ -82,24 +88,29 @@ export const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
         </div>
 
         {/* Action buttons matching screenshot */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={onEditPatient}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-[#00695c] bg-white border border-[#00695c] rounded-md hover:bg-teal-50 transition-colors cursor-pointer shadow-2xs"
-          >
-            <Edit className="w-4 h-4 text-[#00695c]" />
-            <span>Edit Patient</span>
-          </button>
+        {(onEditPatient || onAddVisit || onAddPrescription || onRequestAppointment) && (
+          <div className="flex flex-wrap items-center gap-2.5">
+            {onEditPatient && (
+              <button
+                type="button"
+                onClick={onEditPatient}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-[#00695c] bg-white border border-[#00695c] rounded-md hover:bg-teal-50 transition-colors cursor-pointer shadow-2xs"
+              >
+                <Edit className="w-4 h-4 text-[#00695c]" />
+                <span>Edit Patient</span>
+              </button>
+            )}
 
-          <button
-            type="button"
-            onClick={onAddVisit}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-[#00695c] bg-white border border-[#00695c] rounded-md hover:bg-teal-50 transition-colors cursor-pointer shadow-2xs"
-          >
-            <CalendarPlus className="w-4 h-4 text-[#00695c]" />
-            <span>Add New Visit</span>
-          </button>
+            {onAddVisit && (
+              <button
+                type="button"
+                onClick={onAddVisit}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-[#00695c] bg-white border border-[#00695c] rounded-md hover:bg-teal-50 transition-colors cursor-pointer shadow-2xs"
+              >
+                <CalendarPlus className="w-4 h-4 text-[#00695c]" />
+                <span>Add New Visit</span>
+              </button>
+            )}
 
           {onAddPrescription && (
             <button
@@ -111,7 +122,19 @@ export const PatientDetailsCard: React.FC<PatientDetailsCardProps> = ({
               <span>Add New Prescription</span>
             </button>
           )}
-        </div>
+
+            {onRequestAppointment && (
+              <button
+                type="button"
+                onClick={onRequestAppointment}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-[#00695c] bg-white border border-[#00695c] rounded-md hover:bg-teal-50 transition-colors cursor-pointer shadow-2xs"
+              >
+                <CalendarPlus className="w-4 h-4 text-[#00695c]" />
+                <span>Request an Appointment</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Two Column Grid: Basic Details & Contact Details */}

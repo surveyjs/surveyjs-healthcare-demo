@@ -5,6 +5,7 @@ import { PatientHistory } from '../components/patients/PatientHistory';
 import { EditPatientModal } from '../components/modals/EditPatientModal';
 import { AddVisitModal } from '../components/modals/AddVisitModal';
 import { AddPrescriptionModal } from '../components/modals/AddPrescriptionModal';
+import { AppointmentRequestModal } from '../components/modals/AppointmentRequestModal';
 import { patientRepository } from '../repositories/patientRepository';
 import { Patient, Prescription, Visit } from '../types/patient';
 import { FormId } from '../types/forms';
@@ -33,6 +34,7 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
   const [visitBeingEdited, setVisitBeingEdited] = useState<Visit | null>(null);
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [isAppointmentRequestOpen, setIsAppointmentRequestOpen] = useState(false);
   const [prescriptionBeingEdited, setPrescriptionBeingEdited] = useState<Prescription | null>(null);
 
   // Load patient from the database
@@ -85,17 +87,6 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
 
   const patientFullName = `${patient.firstName} ${patient.lastName}`;
 
-  const handleRevokeVisit = async (visitId: string) => {
-    if (!confirm('Revoke this visit? It will be removed from your record.')) return;
-    try {
-      await patientRepository.removeVisit(patient.id, visitId);
-      showToast('success', 'Visit revoked', 'The visit has been removed from your record.');
-    } catch (e) {
-      console.error('Failed to revoke visit:', e);
-      showToast('error', 'Revoke failed', 'The visit could not be revoked. Please try again.');
-    }
-  };
-
   const openNewVisitModal = () => {
     setVisitBeingEdited(null);
     setIsVisitModalOpen(true);
@@ -140,18 +131,20 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
           {/* Top Patient Profile Header & Details */}
           <PatientDetailsCard
             patient={patient}
-            onEditPatient={() => setIsEditModalOpen(true)}
-            onAddVisit={openNewVisitModal}
+            onEditPatient={isPatientViewer ? undefined : () => setIsEditModalOpen(true)}
+            onAddVisit={isPatientViewer ? undefined : openNewVisitModal}
             onAddPrescription={isPatientViewer ? undefined : openNewPrescriptionModal}
+            onRequestAppointment={isPatientViewer ? () => setIsAppointmentRequestOpen(true) : undefined}
+            showStatus={!isPatientViewer}
           />
 
           {/* Clinical Visits & Medication History */}
           <PatientHistory
             visits={patient.visits || []}
             prescriptions={patient.prescriptions || []}
-            onOpenVisitModal={openNewVisitModal}
+            viewerRole={viewerRole}
+            onOpenVisitModal={isPatientViewer ? undefined : openNewVisitModal}
             onOpenPrescriptionModal={isPatientViewer ? undefined : openNewPrescriptionModal}
-            onRevokeVisit={isPatientViewer ? handleRevokeVisit : undefined}
             onEditVisit={isPatientViewer ? undefined : openEditVisitModal}
             onEditPrescription={isPatientViewer ? undefined : openEditPrescriptionModal}
           />
@@ -224,6 +217,19 @@ export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
             : undefined
         }
       />
+
+      {isPatientViewer && (
+        <AppointmentRequestModal
+          isOpen={isAppointmentRequestOpen}
+          patient={patient}
+          onClose={() => setIsAppointmentRequestOpen(false)}
+          onSubmitted={() => showToast(
+            'success',
+            'Appointment request sent',
+            'Your practice will contact you to confirm an appointment.',
+          )}
+        />
+      )}
     </div>
   );
 };

@@ -10,7 +10,7 @@ The application implements a realistic clinical workflow, split by user role:
 ### Authentication & roles
 
 - **Login** — the login screen itself is a SurveyJS form ([login.json](src/survey/schemas/login.json)). A "quick sign-in" dropdown is populated live from the API via `choicesByUrl`, and SurveyJS triggers (`copyvalue` / `setvalue`) prefill the credentials. Failed logins keep the form active by cancelling `onCompleting`.
-- **Role-based UI** — doctors get the full patient-management experience; patient accounts get a restricted portal showing only their own profile (no form builder, no prescription management), plus the ability to revoke their own visits.
+- **Role-based UI** — doctors get the full patient-management experience; patient accounts get a restricted portal showing only their own profile and read-only history, with staff management controls hidden.
 
 ### Doctor / staff use cases
 
@@ -23,8 +23,9 @@ The application implements a realistic clinical workflow, split by user role:
 
 ### Patient portal use cases
 
-- **My profile** — a patient signs in and sees only their own record
-- **Revoke visit** — a patient can remove a visit from their own history
+- **My profile** — a patient signs in and sees only their own record and read-only visit/medication history
+- **Request an appointment** — submit a SurveyJS request prefilled with the patient's contact details; a confirmation toast appears after it is stored
+- **Staff review** — submitted requests appear in Inpatient Settings
 
 ## Navigation & URLs
 
@@ -87,6 +88,7 @@ SurveyJS JSON → Survey Creator → edited JSON → Form Library → applicatio
 | [add-new-prescription.json](src/survey/schemas/add-new-prescription.json) | Add Prescription modal |
 | [patient-visits.json](src/survey/schemas/patient-visits.json) | Read-only SurveyJS visit history view on the patient profile |
 | [prescribed-medication.json](src/survey/schemas/prescribed-medication.json) | Read-only SurveyJS medication record dialog from the medications overview |
+| [appointment-request.json](src/survey/schemas/appointment-request.json) | Patient portal appointment request modal |
 | [login.json](src/survey/schemas/login.json) | Login page |
 
 5. **Survey ↔ domain mapping** — [surveyMapping.ts](src/repositories/surveyMapping.ts) contains the pure functions that translate between `survey.data` and the application's domain types, including collection mappings for the visit and prescription dynamic panels (note: SurveyJS static panels are layout-only, so child question values arrive as flat keys, and masked inputs like the NHS number store the unmasked value).
@@ -110,11 +112,13 @@ Persistence is a real client–server setup:
 - **Auto-seeding** — an empty database is seeded from [src/data/initialData.ts](src/data/initialData.ts): demo patients plus demo users (2 doctors + 2 patients, all with password `demo1234`). All data is fictional.
 - **Client repositories** — the UI never touches the database directly:
   - [patientRepository.ts](src/repositories/patientRepository.ts) is an async fetch client for the `/api` endpoints (proxied by Vite in dev).
+  - [appointmentRepository.ts](src/repositories/appointmentRepository.ts) submits appointment requests and loads them for staff review.
   - [formRepository.ts](src/repositories/formRepository.ts) persists **only schema overrides** edited in the Survey Creator (the `form_schemas` table); the default schemas stay in the bundled JSON. `formRepository.init()` preloads overrides in [main.tsx](src/main.tsx) before the first render so `getForm()` remains synchronous.
   - [authRepository.ts](src/repositories/authRepository.ts) calls `POST /api/auth/login` / `GET /api/auth/roster` and keeps the session in `sessionStorage`/`localStorage` (key `hc-auth-user`). Passwords are stored as hashes server-side.
 - **Ordering** — visits and prescriptions use a `seq` column (newest = highest, `ORDER BY seq DESC`) so newly added records appear first.
 - **Visit updates** — `PUT /api/patients/:id/visits/:visitId` updates a visit in place only when both its saved date and submitted date are today; other visit updates are rejected.
 - **Prescription updates** — `PUT /api/patients/:id/prescriptions/:prescriptionId` updates active prescriptions only; the API and database both reject edits to completed or missing records.
+- **Appointment requests** — `POST /api/appointment-requests` stores patient form responses in SQLite; `GET /api/appointment-requests` supplies the staff review list. Requests are linked to the patient record and cleared by the demo reset.
 - **Test isolation** — e2e tests reset database state via `POST /api/admin/reset`; unit tests run the same `db.ts` against an in-memory SQLite database.
 
 Because all storage goes through the repositories, the SQLite backend could be swapped for any other API/database without touching the UI.
@@ -130,7 +134,7 @@ src/
   components/
     common/           Toast notifications
     layout/           Header, Sidebar
-    modals/           Edit Patient, Add Visit, Add Prescription
+    modals/           Edit Patient, Add Visit, Add Prescription, Appointment Request
     patients/         Patient cards, details, history
   pages/
     LoginPage
@@ -139,6 +143,7 @@ src/
     PatientProfilePage
   repositories/
     patientRepository   async API client for patient data
+    appointmentRepository appointment request API client
     formRepository      SurveyJS schema overrides (API-backed)
     authRepository      login/session handling
     surveyMapping       pure survey.data ↔ domain mapping

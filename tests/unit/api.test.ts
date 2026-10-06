@@ -263,6 +263,41 @@ describe('form schemas API', () => {
   });
 });
 
+describe('appointment requests API', () => {
+  it('validates, creates, and lists patient appointment requests', async () => {
+    await api('/admin/reset', { method: 'POST' });
+    expect(await (await api('/appointment-requests')).json()).toEqual([]);
+
+    const invalid = await api('/appointment-requests', {
+      method: 'POST',
+      body: JSON.stringify({ patientId: 'p-emma-thompson', requestData: [] }),
+    });
+    expect(invalid.status).toBe(400);
+
+    const missingPatient = await api('/appointment-requests', {
+      method: 'POST',
+      body: JSON.stringify({ patientId: 'missing', requestData: { reason_for_appointment: 'Review' } }),
+    });
+    expect(missingPatient.status).toBe(404);
+
+    const created = await api('/appointment-requests', {
+      method: 'POST',
+      body: JSON.stringify({
+        patientId: 'p-emma-thompson',
+        requestData: { preferred_date: '2026-10-12', reason_for_appointment: 'Annual review' },
+      }),
+    });
+    expect(created.status).toBe(201);
+    const request = await created.json();
+    expect(request).toMatchObject({ patientId: 'p-emma-thompson', patientName: 'Emma Thompson' });
+    expect(request.requestData.reason_for_appointment).toBe('Annual review');
+
+    const listed = await (await api('/appointment-requests')).json();
+    expect(listed).toHaveLength(1);
+    expect(listed[0].id).toBe(request.id);
+  });
+});
+
 describe('auth API', () => {
   it('GET /api/auth/roster lists the seeded demo users without secrets', async () => {
     await api('/admin/reset', { method: 'POST' });

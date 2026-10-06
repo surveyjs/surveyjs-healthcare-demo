@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { AppointmentRequest } from '../src/types/appointmentRequest';
 import { Patient, Visit, Prescription } from '../src/types/patient';
 import { AuthUser, RosterEntry, UserRole } from '../src/types/auth';
 import { INITIAL_PATIENTS, INITIAL_USERS } from '../src/data/initialData';
@@ -80,6 +81,14 @@ CREATE TABLE IF NOT EXISTS users (
   patient_id    TEXT,
   seq           INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS appointment_requests (
+  id           TEXT PRIMARY KEY,
+  patient_id   TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  request_data TEXT NOT NULL,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_appointment_requests_patient ON appointment_requests(patient_id);
 `;
 
 function hashPassword(password: string): string {
@@ -451,6 +460,42 @@ export function createDb(dbPath: string) {
       return result.changes > 0 ? withId : undefined;
     },
 
+    createAppointmentRequest(
+      patientId: string,
+      requestData: Record<string, unknown>,
+    ): AppointmentRequest | undefined {
+      if (!db.prepare('SELECT id FROM patients WHERE id = ?').get(patientId)) return undefined;
+      const id = `ar-${randomUUID()}`;
+      db.prepare(
+        'INSERT INTO appointment_requests (id, patient_id, request_data) VALUES (?, ?, ?)',
+      ).run(id, patientId, JSON.stringify(requestData));
+      return this.listAppointmentRequests().find((request) => request.id === id);
+    },
+
+    listAppointmentRequests(): AppointmentRequest[] {
+      const rows = db.prepare(`
+        SELECT ar.id, ar.patient_id, ar.request_data, ar.created_at,
+               p.first_name, p.last_name
+        FROM appointment_requests ar
+        JOIN patients p ON p.id = ar.patient_id
+        ORDER BY ar.rowid DESC
+      `).all() as {
+        id: string;
+        patient_id: string;
+        request_data: string;
+        created_at: string;
+        first_name: string;
+        last_name: string;
+      }[];
+      return rows.map((row) => ({
+        id: row.id,
+        patientId: row.patient_id,
+        patientName: `${row.first_name} ${row.last_name}`,
+        requestData: JSON.parse(row.request_data) as Record<string, unknown>,
+        createdAt: row.created_at,
+      }));
+    },
+
     removeVisit(patientId: string, visitId: string): boolean {
       const result = db
         .prepare('DELETE FROM visits WHERE patient_id = ? AND id = ?')
@@ -460,6 +505,7 @@ export function createDb(dbPath: string) {
 
     resetToInitial(): void {
       const wipeAndSeed = db.transaction(() => {
+        db.prepare('DELETE FROM appointment_requests').run();
         db.prepare('DELETE FROM prescriptions').run();
         db.prepare('DELETE FROM visits').run();
         db.prepare('DELETE FROM patients').run();

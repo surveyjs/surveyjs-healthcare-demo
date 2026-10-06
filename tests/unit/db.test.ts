@@ -266,6 +266,29 @@ describe('healthcare SQLite db', () => {
     expect(db.listFormSchemas()).toEqual({});
   });
 
+  it('stores appointment requests with patient details and lists newest first', () => {
+    const first = db.createAppointmentRequest('p-emma-thompson', {
+      preferred_date: '2026-10-12',
+      reason_for_appointment: 'Annual review',
+    })!;
+    const second = db.createAppointmentRequest('p-david-miller', {
+      preferred_date: '2026-10-13',
+      reason_for_appointment: 'Medication review',
+    })!;
+
+    expect(first).toMatchObject({ patientId: 'p-emma-thompson', patientName: 'Emma Thompson' });
+    expect(first.requestData.reason_for_appointment).toBe('Annual review');
+    expect(second).toMatchObject({ patientId: 'p-david-miller', patientName: 'David Miller' });
+    expect(db.listAppointmentRequests().map((request) => request.id)).toEqual([second.id, first.id]);
+    expect(db.createAppointmentRequest('missing', {})).toBeUndefined();
+  });
+
+  it('clears appointment requests when demo data is reset', () => {
+    db.createAppointmentRequest('p-emma-thompson', { reason_for_appointment: 'Review' });
+    db.resetToInitial();
+    expect(db.listAppointmentRequests()).toEqual([]);
+  });
+
   it('clears form schema overrides on reset', () => {
     db.saveFormSchema('patient-search', { title: 'x' });
     db.resetToInitial();

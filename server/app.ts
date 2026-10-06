@@ -27,6 +27,32 @@ export function createApp(db: HealthcareDb): Express {
     res.json(user);
   });
 
+  app.get('/api/appointment-requests', (_req, res) => {
+    res.json(db.listAppointmentRequests());
+  });
+
+  app.post('/api/appointment-requests', (req, res) => {
+    const body = req.body;
+    if (
+      !body ||
+      typeof body.patientId !== 'string' ||
+      !body.patientId.trim() ||
+      !body.requestData ||
+      typeof body.requestData !== 'object' ||
+      Array.isArray(body.requestData)
+    ) {
+      res.status(400).json({ error: 'patientId and requestData are required' });
+      return;
+    }
+
+    const request = db.createAppointmentRequest(body.patientId, body.requestData);
+    if (!request) {
+      res.status(404).json({ error: 'Patient not found' });
+      return;
+    }
+    res.status(201).json(request);
+  });
+
   app.get('/api/patients', (req, res) => {
     const { lastName, dateOfBirth, nhsNumber } = req.query;
     const patients = db.listPatients({

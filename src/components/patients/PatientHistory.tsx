@@ -8,6 +8,7 @@ import { SurveyRenderer } from '../../survey/SurveyRenderer';
 interface PatientHistoryProps {
   visits: Visit[];
   prescriptions: Prescription[];
+  viewerRole?: 'doctor' | 'patient';
   onOpenVisitModal?: () => void;
   onOpenPrescriptionModal?: () => void;
   onRevokeVisit?: (visitId: string) => void;
@@ -18,6 +19,7 @@ interface PatientHistoryProps {
 export const PatientHistory: React.FC<PatientHistoryProps> = ({
   visits,
   prescriptions,
+  viewerRole = 'doctor',
   onOpenVisitModal,
   onOpenPrescriptionModal,
   onRevokeVisit,
@@ -79,7 +81,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
             <h2 className="text-base font-bold text-gray-900">
               Visits{' '}
               <span className="text-xs font-normal text-gray-500">
-                {onRevokeVisit ? '(Your Visits)' : '(Past Visits - Read Only)'}
+                {viewerRole === 'patient' ? '(Your Visits)' : '(Past Visits - Read Only)'}
               </span>
             </h2>
           </div>

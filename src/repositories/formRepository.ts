@@ -5,6 +5,7 @@ import addNewVisitSchema from '../survey/schemas/add-new-visit.json';
 import addNewPrescriptionSchema from '../survey/schemas/add-new-prescription.json';
 import patientVisitsSchema from '../survey/schemas/patient-visits.json';
 import prescribedMedicationSchema from '../survey/schemas/prescribed-medication.json';
+import appointmentRequestSchema from '../survey/schemas/appointment-request.json';
 import loginSchema from '../survey/schemas/login.json';
 import { FormId, FormMetadata } from '../types/forms';
 
@@ -17,6 +18,7 @@ const DEFAULT_SCHEMAS: Record<FormId, object> = {
   'add-new-prescription': addNewPrescriptionSchema,
   'patient-visits': patientVisitsSchema,
   'prescribed-medication': prescribedMedicationSchema,
+  'appointment-request': appointmentRequestSchema,
 };
 
 export const FORM_METADATA_LIST: FormMetadata[] = [
@@ -61,6 +63,12 @@ export const FORM_METADATA_LIST: FormMetadata[] = [
     title: 'Prescribed Medication History Form',
     description: 'Dynamic panel schema for managing patient medication courses.',
     defaultSchema: prescribedMedicationSchema,
+  },
+  {
+    id: 'appointment-request',
+    title: 'Medical Appointment Request Form',
+    description: 'Patient form for requesting an appointment with the practice.',
+    defaultSchema: appointmentRequestSchema,
   },
   {
     id: 'login',

@@ -14,7 +14,9 @@ import { AuthUser } from './types/auth';
 import { patientRepository } from './repositories/patientRepository';
 import { authRepository } from './repositories/authRepository';
 import { formRepository, FORM_METADATA_LIST } from './repositories/formRepository';
-import { ShieldCheck, Settings, Users, Sparkles, Building2 } from 'lucide-react';
+import { ShieldCheck, Settings, Users, Sparkles, Building2, RefreshCw } from 'lucide-react';
+import { appointmentRepository } from './repositories/appointmentRepository';
+import { AppointmentRequest } from './types/appointmentRequest';
 
 type ShowToast = (type: 'success' | 'error' | 'info', title: string, message?: string) => void;
 
@@ -45,6 +47,79 @@ function tabForPath(pathname: string): NavTab {
   if (pathname.startsWith('/medications')) return 'medications';
   if (pathname.startsWith('/settings')) return 'settings';
   return 'manage';
+}
+
+function AppointmentRequestsPanel() {
+  const [requests, setRequests] = useState<AppointmentRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadRequests = async () => {
+    setLoading(true);
+    try {
+      setRequests(await appointmentRepository.getAll());
+      setError('');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Requests could not be loaded.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadRequests();
+  }, []);
+
+  return (
+    <section className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-4">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div>
+          <h2 className="text-base font-bold text-gray-900">Appointment Requests</h2>
+          <p className="text-xs text-gray-500 mt-1">Requests submitted through the patient portal.</p>
+        </div>
+        <button
+          type="button"
+          aria-label="Refresh appointment requests"
+          onClick={() => void loadRequests()}
+          className="p-2 text-gray-500 hover:text-gray-900 rounded-md"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+      {loading ? (
+        <p role="status" className="text-sm text-gray-500">Loading requests…</p>
+      ) : error ? (
+        <p role="alert" className="text-sm text-rose-700">{error}</p>
+      ) : requests.length === 0 ? (
+        <p className="text-sm text-gray-500">No appointment requests yet.</p>
+      ) : (
+        <div className="divide-y divide-gray-100">
+          {requests.map((request) => (
+            <article key={request.id} className="py-4 first:pt-0 last:pb-0">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h3 className="text-sm font-semibold text-gray-900">{request.patientName}</h3>
+                <time className="text-xs text-gray-500">{request.createdAt}</time>
+              </div>
+              <dl className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                {Object.entries(request.requestData)
+                  .filter(([, value]) => value !== '' && value !== null && value !== undefined)
+                  .map(([key, value]) => (
+                    <div key={key} className="min-w-0">
+                      <dt className="inline font-medium text-gray-500">
+                        {key.replace(/[_-]+/g, ' ')}:{' '}
+                      </dt>
+                      <dd className="inline break-words text-gray-800">
+                        {Array.isArray(value) ? value.join(', ') : String(value)}
+                      </dd>
+                    </div>
+                  ))}
+              </dl>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 export default function App() {
@@ -290,6 +365,8 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            <AppointmentRequestsPanel />
           </div>
   );
 
