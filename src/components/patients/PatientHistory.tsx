@@ -1,22 +1,35 @@
-import React from 'react';
-import { Pill, Clock, Trash2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Pill, Clock, Trash2, Pencil } from 'lucide-react';
 import { Visit, Prescription } from '../../types/patient';
+import { formRepository } from '../../repositories/formRepository';
+import { mapVisitsToSurveyData } from '../../repositories/surveyMapping';
+import { SurveyRenderer } from '../../survey/SurveyRenderer';
 
 interface PatientHistoryProps {
   visits: Visit[];
   prescriptions: Prescription[];
+  viewerRole?: 'doctor' | 'patient';
   onOpenVisitModal?: () => void;
   onOpenPrescriptionModal?: () => void;
   onRevokeVisit?: (visitId: string) => void;
+  onEditVisit?: (visit: Visit) => void;
+  onEditPrescription?: (prescription: Prescription) => void;
 }
 
 export const PatientHistory: React.FC<PatientHistoryProps> = ({
   visits,
   prescriptions,
+  viewerRole = 'doctor',
   onOpenVisitModal,
   onOpenPrescriptionModal,
   onRevokeVisit,
+  onEditVisit,
+  onEditPrescription,
 }) => {
+  const [showSurveyView, setShowSurveyView] = useState(false);
+  const [visitSchema, setVisitSchema] = useState(() => formRepository.getForm('patient-visits'));
+  const today = new Date();
+  const todayISODate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   // Helper to format date into Day, Month Year, Time
   const parseVisitDate = (dateStr?: string, timeStr?: string) => {
     if (!dateStr) return { day: '01', monthYear: 'Jan 2024', time: timeStr || '09:00' };
@@ -47,11 +60,15 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
     return { day: dateStr.slice(0, 2), monthYear: dateStr.slice(3), time: timeStr || '09:00' };
   };
 
+  useEffect(() => formRepository.subscribe((changedId) => {
+    if (changedId === 'patient-visits') setVisitSchema(formRepository.getForm('patient-visits'));
+  }), []);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left Column: Visits (Past Visits - Read Only) */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs flex flex-col">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+        <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
           <div className="flex items-center gap-2">
             <span className="w-4 h-4 text-gray-500">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,7 +81,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
             <h2 className="text-base font-bold text-gray-900">
               Visits{' '}
               <span className="text-xs font-normal text-gray-500">
-                {onRevokeVisit ? '(Your Visits)' : '(Past Visits - Read Only)'}
+                {viewerRole === 'patient' ? '(Your Visits)' : '(Past Visits - Read Only)'}
               </span>
             </h2>
           </div>
@@ -77,12 +94,28 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
               + Record Visit
             </button>
           )}
+          {visits.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowSurveyView((current) => !current)}
+              className="text-xs font-medium text-[#00695c] hover:underline"
+              aria-pressed={showSurveyView}
+            >
+              {showSurveyView ? 'Show timeline' : 'Survey view'}
+            </button>
+          )}
         </div>
 
         {visits.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-500">
             No clinical visits recorded yet.
           </div>
+        ) : showSurveyView ? (
+          <SurveyRenderer
+            schema={visitSchema}
+            initialData={mapVisitsToSurveyData(visits)}
+            readOnly
+          />
         ) : (
           <div className="space-y-4">
             {visits.map((visit) => {
@@ -91,7 +124,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
               return (
                 <div
                   key={visit.id}
-                  className="flex items-start gap-4 p-3.5 rounded-lg border border-gray-150 bg-gray-50/50 hover:bg-gray-50 transition-colors"
+                  className="flex items-start gap-4 p-3.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:border-gray-400 hover:bg-gray-50 transition-colors"
                 >
                   {/* Date Block */}
                   <div className="w-16 shrink-0 text-center bg-white border border-gray-200 rounded-md py-2 px-1 shadow-2xs">
@@ -124,7 +157,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 border-t border-gray-200/60">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 border-t border-gray-200">
                       {visit.diagnosis && (
                         <div>
                           <span className="text-gray-500 font-medium">Diagnosis:</span>{' '}
@@ -140,16 +173,32 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
                     </div>
                   </div>
 
-                  {onRevokeVisit && (
-                    <button
-                      type="button"
-                      onClick={() => onRevokeVisit(visit.id)}
-                      className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
-                      title="Revoke this visit"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Revoke</span>
-                    </button>
+                  {(onRevokeVisit || (onEditVisit && visit.visitDate === todayISODate)) && (
+                    <div className="shrink-0 flex items-center gap-3">
+                      {onEditVisit && visit.visitDate === todayISODate && (
+                        <button
+                          type="button"
+                          onClick={() => onEditVisit(visit)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-[#00695c] hover:underline cursor-pointer"
+                          aria-label="Edit visit"
+                          title="Edit this visit"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                      {onRevokeVisit && (
+                        <button
+                          type="button"
+                          onClick={() => onRevokeVisit(visit.id)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                          title="Revoke this visit"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Revoke</span>
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               );
@@ -160,7 +209,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
 
       {/* Right Column: Prescribed Medication (Active & Past) */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs flex flex-col">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+        <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
           <div className="flex items-center gap-2">
             <Pill className="w-4 h-4 text-teal-700" />
             <h2 className="text-base font-bold text-gray-900">
@@ -180,7 +229,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
 
         {prescriptions.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-500">
-            No active or past medications prescribed.
+            No active or past medications have been prescribed.
           </div>
         ) : (
           <div className="space-y-4">
@@ -190,7 +239,7 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
               return (
                 <div
                   key={rx.id}
-                  className="flex items-start gap-4 p-4 rounded-lg border border-gray-150 bg-white shadow-2xs hover:border-teal-200 transition-colors"
+                  className="flex items-start gap-4 p-4 rounded-lg border border-gray-200 bg-white shadow-2xs hover:border-gray-400 transition-colors"
                 >
                   {/* Pill Icon badge */}
                   <div
@@ -207,15 +256,28 @@ export const PatientHistory: React.FC<PatientHistoryProps> = ({
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-bold text-gray-900">{rx.medication}</h4>
-                      <span
-                        className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${
-                          isActive
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-gray-100 text-gray-600 border-gray-200'
-                        }`}
-                      >
-                        {rx.status}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold border ${
+                            isActive
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-gray-100 text-gray-600 border-gray-200'
+                          }`}
+                        >
+                          {rx.status}
+                        </span>
+                        {isActive && onEditPrescription && (
+                          <button
+                            type="button"
+                            onClick={() => onEditPrescription(rx)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-[#00695c] hover:underline cursor-pointer"
+                            aria-label={`Edit prescription: ${rx.medication}`}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">

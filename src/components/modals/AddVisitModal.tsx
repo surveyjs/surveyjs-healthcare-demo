@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, Settings } from 'lucide-react';
-import { Patient } from '../../types/patient';
+import { Patient, Visit } from '../../types/patient';
 import { formRepository } from '../../repositories/formRepository';
 import { patientRepository } from '../../repositories/patientRepository';
+import { authRepository } from '../../repositories/authRepository';
 import { SurveyRenderer } from '../../survey/SurveyRenderer';
 import { Model } from 'survey-core';
 import { FormId } from '../../types/forms';
@@ -10,14 +11,39 @@ import { FormId } from '../../types/forms';
 interface AddVisitModalProps {
   isOpen: boolean;
   patient: Patient | null;
+  visit?: Visit | null;
   onClose: () => void;
   onSaved: (patient: Patient) => void;
   onOpenBuilder?: (formId: FormId) => void;
 }
 
+type SchemaChoice = string | { value?: string; text?: string };
+
+const choiceValue = (c: SchemaChoice) => (typeof c === 'string' ? c : (c.value ?? ''));
+const choiceText = (c: SchemaChoice) => (typeof c === 'string' ? c : (c.text ?? c.value ?? ''));
+
+/**
+ * The logged-in doctor is the default practitioner. If they are not among the
+ * schema's choices, their full name selects the dropdown's "Other" item
+ * (SurveyJS moves unlisted values into the comment). Non-doctor contexts fall
+ * back to the first choice.
+ */
+function getPractitionerDefault(schema: object): string | undefined {
+  const pages = (schema as { pages?: { elements?: { name?: string; choices?: SchemaChoice[] }[] }[] }).pages ?? [];
+  const question = pages.flatMap((p) => p.elements ?? []).find((el) => el.name === 'practitioner');
+  const choices = question?.choices ?? [];
+  const user = authRepository.getStoredUser();
+  if (user?.role === 'doctor') {
+    const match = choices.find((c) => choiceText(c) === user.fullName);
+    return match ? choiceValue(match) : user.fullName;
+  }
+  return choices.length > 0 ? choiceValue(choices[0]) : undefined;
+}
+
 export const AddVisitModal: React.FC<AddVisitModalProps> = ({
   isOpen,
   patient,
+  visit = null,
   onClose,
   onSaved,
   onOpenBuilder,
@@ -38,23 +64,30 @@ export const AddVisitModal: React.FC<AddVisitModalProps> = ({
 
   const schema = formRepository.getForm('add-new-visit');
   const now = new Date();
-  const initialData = {
-    visit_date: now.toISOString().split('T')[0],
-    visit_time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-    visit_type: 'consultation',
-    practitioner: 'dr_smith',
-  };
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const initialData = visit
+    ? patientRepository.mapVisitToSurveyData(visit)
+    : {
+        visit_date: today,
+        visit_time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+        visit_type: 'consultation',
+        practitioner: getPractitionerDefault(schema),
+      };
 
   const handleComplete = async (data: Record<string, any>) => {
     try {
-      await patientRepository.addVisit(patient.id, data);
+      if (visit) {
+        await patientRepository.updateVisit(patient.id, visit.id, data);
+      } else {
+        await patientRepository.addVisit(patient.id, data);
+      }
       const updated = await patientRepository.getPatientById(patient.id);
       if (updated) {
         onSaved(updated);
       }
       onClose();
     } catch (e) {
-      console.error('Failed to add visit:', e);
+      console.error(`Failed to ${visit ? 'update' : 'add'} visit:`, e);
     }
   };
 
@@ -69,7 +102,7 @@ export const AddVisitModal: React.FC<AddVisitModalProps> = ({
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white shrink-0">
-          <h2 className="text-lg font-bold text-gray-900">Add New Visit</h2>
+          <h2 className="text-lg font-bold text-gray-900">{visit ? 'Edit Visit' : 'Add New Visit'}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -82,11 +115,13 @@ export const AddVisitModal: React.FC<AddVisitModalProps> = ({
         {/* Modal Content / Survey Form */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <SurveyRenderer
-            key={`visit-${patient.id}-${schemaVersion}`}
+            key={`visit-${patient.id}-${visit?.id ?? 'new'}-${schemaVersion}`}
             schema={schema}
             initialData={initialData}
             onComplete={handleComplete}
             showNavigationButtons={false}
+            showCompletePage={false}
+            className="survey-modal"
             onModelReady={(model) => setSurveyModel(model)}
           />
 
@@ -99,7 +134,7 @@ export const AddVisitModal: React.FC<AddVisitModalProps> = ({
                 className="inline-flex items-center gap-1.5 text-xs text-[#00695c] hover:underline cursor-pointer font-medium"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>Customize Visit Form in Builder</span>
+                <span>Customize Patient Visit Form</span>
               </button>
             </div>
           )}
@@ -113,7 +148,7 @@ export const AddVisitModal: React.FC<AddVisitModalProps> = ({
             className="inline-flex items-center gap-2 bg-[#00695c] hover:bg-[#004d40] text-white text-sm font-medium px-4 py-2 rounded-md shadow-xs transition-colors cursor-pointer"
           >
             <Check className="w-4 h-4" />
-            <span>Save Visit</span>
+            <span>{visit ? 'Save Changes' : 'Save Visit'}</span>
           </button>
 
           <button

@@ -1,4 +1,4 @@
-import { AuthUser } from '../types/auth';
+import { AuthUser, RosterEntry } from '../types/auth';
 
 const STORAGE_KEY = 'hc-auth-user';
 
@@ -15,6 +15,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const authRepository = {
+  getRoster(): Promise<RosterEntry[]> {
+    return request<RosterEntry[]>('/auth/roster');
+  },
+
   async login(username: string, password: string): Promise<AuthUser> {
     return request<AuthUser>('/auth/login', {
       method: 'POST',

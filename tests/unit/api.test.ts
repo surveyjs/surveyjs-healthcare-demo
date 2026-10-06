@@ -118,6 +118,47 @@ describe('patients API', () => {
     expect(patient.visits).toHaveLength(2);
   });
 
+  it('PUT /api/patients/:id/visits/:visitId edits only visits dated today', async () => {
+    await api('/admin/reset', { method: 'POST' });
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const created = await api('/patients/p-david-miller/visits', {
+      method: 'POST',
+      body: JSON.stringify({ visitDate: today, visitTime: '09:00', visitType: 'Consultation', practitioner: 'Dr. Jones' }),
+    });
+    const { visit } = await created.json();
+
+    const tomorrowDate = new Date(now);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrow = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, '0')}-${String(tomorrowDate.getDate()).padStart(2, '0')}`;
+    const changedDate = await api(`/patients/p-david-miller/visits/${visit.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...visit, visitDate: tomorrow }),
+    });
+    expect(changedDate.status).toBe(400);
+
+    const updated = await api(`/patients/p-david-miller/visits/${visit.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...visit, reasonForVisit: 'Edited in API test' }),
+    });
+    expect(updated.status).toBe(200);
+    const response = await updated.json();
+    expect(response.visit).toMatchObject({ id: visit.id, reasonForVisit: 'Edited in API test' });
+    expect(response.patient.visits[0].id).toBe(visit.id);
+
+    const oldVisit = await api('/patients/p-emma-thompson/visits/v2', {
+      method: 'PUT',
+      body: JSON.stringify({ visitDate: today, visitType: 'Consultation', practitioner: 'Dr. Smith' }),
+    });
+    expect(oldVisit.status).toBe(400);
+
+    const missing = await api('/patients/p-david-miller/visits/missing', {
+      method: 'PUT',
+      body: JSON.stringify({ visitDate: today }),
+    });
+    expect(missing.status).toBe(404);
+  });
+
   it('DELETE /api/patients/:id/visits/:visitId revokes a visit and 404s for missing', async () => {
     await api('/admin/reset', { method: 'POST' });
     const res = await api('/patients/p-emma-thompson/visits/v2', { method: 'DELETE' });
@@ -150,6 +191,46 @@ describe('patients API', () => {
     expect(patient.prescriptions[0].id).toBe(prescription.id);
   });
 
+  it('PUT /api/patients/:id/prescriptions/:prescriptionId edits active prescriptions only', async () => {
+    await api('/admin/reset', { method: 'POST' });
+    const updated = await api('/patients/p-emma-thompson/prescriptions/rx1', {
+      method: 'PUT',
+      body: JSON.stringify({
+        medication: 'Amlodipine 10mg Tablets',
+        frequency: 'Once daily',
+        dosage: '1 tablet',
+        unit: 'tablet(s)',
+        startDate: '2024-01-15',
+        endDate: 'Ongoing',
+        instructions: 'Take with breakfast.',
+        status: 'Active',
+      }),
+    });
+    expect(updated.status).toBe(200);
+    const response = await updated.json();
+    expect(response.prescription).toMatchObject({ id: 'rx1', medication: 'Amlodipine 10mg Tablets' });
+    expect(response.patient.prescriptions[0].instructions).toBe('Take with breakfast.');
+
+    const completed = await api('/patients/p-emma-thompson/prescriptions/rx2', {
+      method: 'PUT',
+      body: JSON.stringify({ medication: 'Ibuprofen updated' }),
+    });
+    expect(completed.status).toBe(400);
+    expect((await completed.json()).error).toMatch(/active prescriptions/i);
+
+    const missing = await api('/patients/p-emma-thompson/prescriptions/missing', {
+      method: 'PUT',
+      body: JSON.stringify({ medication: 'Unknown' }),
+    });
+    expect(missing.status).toBe(404);
+
+    const invalid = await api('/patients/p-emma-thompson/prescriptions/rx1', {
+      method: 'PUT',
+      body: JSON.stringify({ medication: ' ' }),
+    });
+    expect(invalid.status).toBe(400);
+  });
+
   it('POST /api/admin/reset restores seed data', async () => {
     const res = await api('/admin/reset', { method: 'POST' });
     expect(res.status).toBe(200);
@@ -179,6 +260,41 @@ describe('form schemas API', () => {
   it('rejects non-object schema bodies', async () => {
     const res = await api('/forms/patient-registration', { method: 'PUT', body: JSON.stringify([1, 2]) });
     expect(res.status).toBe(400);
+  });
+});
+
+describe('appointment requests API', () => {
+  it('validates, creates, and lists patient appointment requests', async () => {
+    await api('/admin/reset', { method: 'POST' });
+    expect(await (await api('/appointment-requests')).json()).toEqual([]);
+
+    const invalid = await api('/appointment-requests', {
+      method: 'POST',
+      body: JSON.stringify({ patientId: 'p-emma-thompson', requestData: [] }),
+    });
+    expect(invalid.status).toBe(400);
+
+    const missingPatient = await api('/appointment-requests', {
+      method: 'POST',
+      body: JSON.stringify({ patientId: 'missing', requestData: { reason_for_appointment: 'Review' } }),
+    });
+    expect(missingPatient.status).toBe(404);
+
+    const created = await api('/appointment-requests', {
+      method: 'POST',
+      body: JSON.stringify({
+        patientId: 'p-emma-thompson',
+        requestData: { preferred_date: '2026-10-12', reason_for_appointment: 'Annual review' },
+      }),
+    });
+    expect(created.status).toBe(201);
+    const request = await created.json();
+    expect(request).toMatchObject({ patientId: 'p-emma-thompson', patientName: 'Emma Thompson' });
+    expect(request.requestData.reason_for_appointment).toBe('Annual review');
+
+    const listed = await (await api('/appointment-requests')).json();
+    expect(listed).toHaveLength(1);
+    expect(listed[0].id).toBe(request.id);
   });
 });
 

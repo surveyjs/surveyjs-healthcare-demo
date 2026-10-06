@@ -99,6 +99,44 @@ describe('healthcare SQLite db', () => {
     expect(emma.visits[0].id).toBe(visit.id);
   });
 
+  it('updates a visit dated today without changing its id or order', () => {
+    const date = new Date();
+    const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const visit = db.addVisit('p-emma-thompson', {
+      id: 'today-visit',
+      visitDate: today,
+      visitTime: '09:00',
+      visitType: 'GP Consultation',
+      practitioner: 'Dr. Smith',
+      reasonForVisit: 'Initial reason',
+    })!;
+
+    const updated = db.updateVisit('p-emma-thompson', visit.id, {
+      ...visit,
+      reasonForVisit: 'Updated reason',
+      diagnosis: 'Reviewed',
+    });
+
+    expect(updated?.id).toBe(visit.id);
+    expect(db.getPatient('p-emma-thompson')!.visits[0]).toMatchObject({
+      id: visit.id,
+      reasonForVisit: 'Updated reason',
+      diagnosis: 'Reviewed',
+    });
+  });
+
+  it('does not update visits that are not dated today or do not exist', () => {
+    const visit = db.getPatient('p-emma-thompson')!.visits[0];
+    expect(db.updateVisit('p-emma-thompson', visit.id, { ...visit, diagnosis: 'Changed' })).toBeUndefined();
+    expect(db.updateVisit('p-emma-thompson', 'missing', { ...visit, visitDate: '2024-06-01' })).toBeUndefined();
+
+    const date = new Date();
+    const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const todayVisit = db.addVisit('p-emma-thompson', { ...visit, id: 'mutable-date', visitDate: today })!;
+    expect(db.updateVisit('p-emma-thompson', todayVisit.id, { ...todayVisit, visitDate: '2024-06-01' })).toBeUndefined();
+    expect(db.getPatient('p-emma-thompson')!.visits[0].visitDate).toBe(today);
+  });
+
   it('removes a visit and reports whether anything was deleted', () => {
     expect(db.removeVisit('p-emma-thompson', 'v2')).toBe(true);
     expect(db.getPatient('p-emma-thompson')!.visits.map((v) => v.id)).toEqual(['v1', 'v3']);
@@ -124,6 +162,41 @@ describe('healthcare SQLite db', () => {
     const emma = db.getPatient('p-emma-thompson')!;
     expect(emma.prescriptions).toHaveLength(3);
     expect(emma.prescriptions[0].medication).toBe('Paracetamol 500mg');
+  });
+
+  it('updates active prescriptions but refuses completed or missing prescriptions', () => {
+    const prescription = db.addPrescription('p-emma-thompson', {
+      id: 'rx-editable',
+      medication: 'Original medication',
+      frequency: 'Once daily',
+      dosage: '1 tablet',
+      unit: 'tablets',
+      startDate: '2026-10-06',
+      endDate: 'Ongoing',
+      instructions: '',
+      status: 'Active',
+    })!;
+
+    const updated = db.updatePrescription('p-emma-thompson', prescription.id, {
+      ...prescription,
+      medication: 'Updated medication',
+      instructions: 'Take with food.',
+    });
+    expect(updated).toMatchObject({ medication: 'Updated medication', instructions: 'Take with food.' });
+    expect(db.getPatient('p-emma-thompson')!.prescriptions[0]).toMatchObject({
+      id: prescription.id,
+      medication: 'Updated medication',
+    });
+
+    expect(
+      db.updatePrescription('p-emma-thompson', 'rx2', {
+        ...prescription,
+        id: 'rx2',
+        medication: 'Must remain unchanged',
+      }),
+    ).toBeUndefined();
+    expect(db.updatePrescription('p-emma-thompson', 'missing', prescription)).toBeUndefined();
+    expect(db.updatePrescription('no-patient', prescription.id, prescription)).toBeUndefined();
   });
 
   it('searches by last name (case-insensitive, partial)', () => {
@@ -191,6 +264,29 @@ describe('healthcare SQLite db', () => {
 
     db.deleteFormSchema('patient-search');
     expect(db.listFormSchemas()).toEqual({});
+  });
+
+  it('stores appointment requests with patient details and lists newest first', () => {
+    const first = db.createAppointmentRequest('p-emma-thompson', {
+      preferred_date: '2026-10-12',
+      reason_for_appointment: 'Annual review',
+    })!;
+    const second = db.createAppointmentRequest('p-david-miller', {
+      preferred_date: '2026-10-13',
+      reason_for_appointment: 'Medication review',
+    })!;
+
+    expect(first).toMatchObject({ patientId: 'p-emma-thompson', patientName: 'Emma Thompson' });
+    expect(first.requestData.reason_for_appointment).toBe('Annual review');
+    expect(second).toMatchObject({ patientId: 'p-david-miller', patientName: 'David Miller' });
+    expect(db.listAppointmentRequests().map((request) => request.id)).toEqual([second.id, first.id]);
+    expect(db.createAppointmentRequest('missing', {})).toBeUndefined();
+  });
+
+  it('clears appointment requests when demo data is reset', () => {
+    db.createAppointmentRequest('p-emma-thompson', { reason_for_appointment: 'Review' });
+    db.resetToInitial();
+    expect(db.listAppointmentRequests()).toEqual([]);
   });
 
   it('clears form schema overrides on reset', () => {

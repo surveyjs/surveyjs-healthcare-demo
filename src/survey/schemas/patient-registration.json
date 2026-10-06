@@ -97,7 +97,7 @@
               "name": "address-line-2",
               "startWithNewLine": false,
               "title": "Address line 2",
-              "description": "apartment, building, locality (optional)"
+              "description": "apartment, building, locality"
             },
             {
               "type": "text",
@@ -108,8 +108,7 @@
               "type": "text",
               "name": "county",
               "startWithNewLine": false,
-              "title": "County",
-              "description": "(optional)"
+              "title": "County"
             },
             {
               "type": "text",

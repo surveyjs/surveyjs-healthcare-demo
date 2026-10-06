@@ -1,0 +1,74 @@
+{
+  "title": "Medical Appointment Request Form",
+  "description": "Send a request to your practice. The practice will contact you to confirm an appointment.",
+  "completeText": "Submit Request",
+  "pages": [
+    {
+      "name": "appointment_request",
+      "elements": [
+        {
+          "type": "text",
+          "name": "patient_name",
+          "title": "Patient Name",
+          "isRequired": true
+        },
+        {
+          "type": "text",
+          "name": "date_of_birth",
+          "title": "Date of Birth",
+          "inputType": "date",
+          "isRequired": true
+        },
+        {
+          "type": "text",
+          "name": "nhs_number",
+          "title": "NHS Number"
+        },
+        {
+          "type": "text",
+          "name": "phone_number",
+          "title": "Contact Telephone Number",
+          "inputType": "tel",
+          "isRequired": true
+        },
+        {
+          "type": "text",
+          "name": "email",
+          "title": "Email Address",
+          "inputType": "email"
+        },
+        {
+          "type": "text",
+          "name": "preferred_date",
+          "title": "Preferred Appointment Date",
+          "inputType": "date",
+          "isRequired": true
+        },
+        {
+          "type": "dropdown",
+          "name": "preferred_time",
+          "title": "Preferred Time of Day",
+          "choices": ["No preference", "Morning", "Afternoon"]
+        },
+        {
+          "type": "radiogroup",
+          "name": "urgency",
+          "title": "How soon do you need an appointment?",
+          "defaultValue": "Routine",
+          "choices": ["Routine", "Within a week", "Urgent"]
+        },
+        {
+          "type": "comment",
+          "name": "reason_for_appointment",
+          "title": "Reason for Appointment",
+          "isRequired": true
+        },
+        {
+          "type": "comment",
+          "name": "additional_information",
+          "title": "Additional Information"
+        }
+      ]
+    }
+  ]
+}

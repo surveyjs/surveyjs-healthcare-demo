@@ -79,18 +79,20 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
             initialData={initialData}
             onComplete={handleComplete}
             showNavigationButtons={false}
+            showCompletePage={false}
+            className="survey-modal"
             onModelReady={(model) => setSurveyModel(model)}
           />
 
           {onOpenBuilder && (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+            <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
               <button
                 type="button"
                 onClick={() => onOpenBuilder('edit-patient')}
                 className="inline-flex items-center gap-1.5 text-xs text-[#00695c] hover:underline"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>Customize Edit Patient Form in Builder</span>
+                <span>Customize Edit Patient Form</span>
               </button>
             </div>
           )}

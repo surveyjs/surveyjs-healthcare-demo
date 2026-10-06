@@ -1,30 +1,146 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Header, NavTab } from './components/layout/Header';
 import { RegisterPatientPage } from './pages/RegisterPatientPage';
 import { ManagePatientsPage } from './pages/ManagePatientsPage';
+import { MedicationsPage } from './pages/MedicationsPage';
 import { PatientProfilePage } from './pages/PatientProfilePage';
 import { LoginPage } from './pages/LoginPage';
 import { SurveyCreatorModal } from './survey/SurveyCreatorModal';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { FormId } from './types/forms';
 import { Patient } from './types/patient';
-import { AuthUser } from './types/auth';
+import { AuthUser, RosterEntry } from './types/auth';
 import { patientRepository } from './repositories/patientRepository';
 import { authRepository } from './repositories/authRepository';
 import { formRepository, FORM_METADATA_LIST } from './repositories/formRepository';
-import { Pill, ShieldCheck, Settings, Users, Sparkles, Building2 } from 'lucide-react';
+import { ShieldCheck, Settings, Users, Sparkles, Building2, RefreshCw } from 'lucide-react';
+import { appointmentRepository } from './repositories/appointmentRepository';
+import { AppointmentRequest } from './types/appointmentRequest';
+
+type ShowToast = (type: 'success' | 'error' | 'info', title: string, message?: string) => void;
+
+/** Staff patient profile at /patients/:patientId. */
+function PatientProfileRoute({
+  onOpenFormBuilder,
+  showToast,
+}: {
+  onOpenFormBuilder: (formId: FormId, onReturn?: () => void) => void;
+  showToast: ShowToast;
+}) {
+  const { patientId } = useParams<{ patientId: string }>();
+  const navigate = useNavigate();
+  return (
+    <PatientProfilePage
+      key={patientId}
+      patientId={patientId!}
+      onBackToSearch={() => navigate('/manage')}
+      onOpenFormBuilder={onOpenFormBuilder}
+      showToast={showToast}
+    />
+  );
+}
+
+/** Maps the current URL to the highlighted header tab. */
+function tabForPath(pathname: string): NavTab {
+  if (pathname.startsWith('/register')) return 'register';
+  if (pathname.startsWith('/patients')) return 'profile';
+  if (pathname.startsWith('/medications')) return 'medications';
+  if (pathname.startsWith('/settings')) return 'settings';
+  return 'manage';
+}
+
+function AppointmentRequestsPanel() {
+  const [requests, setRequests] = useState<AppointmentRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadRequests = async () => {
+    setLoading(true);
+    try {
+      setRequests(await appointmentRepository.getAll());
+      setError('');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Requests could not be loaded.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadRequests();
+  }, []);
+
+  return (
+    <section className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-4">
+      <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+        <div>
+          <h2 className="text-base font-bold text-gray-900">Appointment Requests</h2>
+          <p className="text-xs text-gray-500 mt-1">Requests submitted through the patient portal.</p>
+        </div>
+        <button
+          type="button"
+          aria-label="Refresh appointment requests"
+          onClick={() => void loadRequests()}
+          className="p-2 text-gray-500 hover:text-gray-900 rounded-md"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+      {loading ? (
+        <p role="status" className="text-sm text-gray-500">Loading requests…</p>
+      ) : error ? (
+        <p role="alert" className="text-sm text-rose-700">{error}</p>
+      ) : requests.length === 0 ? (
+        <p className="text-sm text-gray-500">No appointment requests yet.</p>
+      ) : (
+        <div className="divide-y divide-gray-100">
+          {requests.map((request) => (
+            <article key={request.id} className="py-4 first:pt-0 last:pb-0">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h3 className="text-sm font-semibold text-gray-900">{request.patientName}</h3>
+                <time className="text-xs text-gray-500">{request.createdAt}</time>
+              </div>
+              <dl className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                {Object.entries(request.requestData)
+                  .filter(([, value]) => value !== '' && value !== null && value !== undefined)
+                  .map(([key, value]) => (
+                    <div key={key} className="min-w-0">
+                      <dt className="inline font-medium text-gray-500">
+                        {key.replace(/[_-]+/g, ' ')}:{' '}
+                      </dt>
+                      <dd className="inline break-words text-gray-800">
+                        {Array.isArray(value) ? value.join(', ') : String(value)}
+                      </dd>
+                    </div>
+                  ))}
+              </dl>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authRepository.getStoredUser());
-  const [activeTab, setActiveTab] = useState<NavTab>('manage');
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('p-emma-thompson');
   const [builderFormId, setBuilderFormId] = useState<FormId | null>(null);
+  // Restores the view (e.g. reopens a modal) the form builder was opened from after "Save & Apply Form"
+  const builderReturnRef = useRef<(() => void) | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [allPatients, setAllPatients] = useState<Patient[]>([]);
+  const [practitioners, setPractitioners] = useState<RosterEntry[]>([]);
 
   useEffect(() => {
     // Patients only see their own record; skip loading the full registry
     if (currentUser?.role !== 'doctor') return;
+    authRepository
+      .getRoster()
+      .then((roster) => setPractitioners(roster.filter((user) => user.role === 'doctor')))
+      .catch((e) => console.error('Failed to load user roster:', e));
     const load = () => {
       patientRepository
         .getAllPatients()
@@ -48,8 +164,7 @@ export default function App() {
   };
 
   const handlePatientCreated = (newPatient: Patient) => {
-    setSelectedPatientId(newPatient.id);
-    setActiveTab('profile');
+    navigate(`/patients/${newPatient.id}`);
     showToast(
       'success',
       'Patient Registered',
@@ -58,29 +173,32 @@ export default function App() {
   };
 
   const handleOpenProfile = (patientId: string) => {
-    setSelectedPatientId(patientId);
-    setActiveTab('profile');
+    navigate(`/patients/${patientId}`);
   };
 
-  const handleOpenFormBuilder = (formId: FormId) => {
+  const handleOpenFormBuilder = (formId: FormId, onReturn?: () => void) => {
+    builderReturnRef.current = onReturn ?? null;
     setBuilderFormId(formId);
   };
 
   const handleLogout = () => {
     authRepository.clearStoredUser();
     setCurrentUser(null);
-    setActiveTab('manage');
   };
 
   const handleLogin = (user: AuthUser) => {
     setCurrentUser(user);
     showToast('success', 'Signed In', `Welcome, ${user.fullName}.`);
+    navigate(user.role === 'patient' ? '/my-profile' : '/manage', { replace: true });
   };
 
   if (!currentUser) {
     return (
       <>
-        <LoginPage onLogin={handleLogin} />
+        <Routes>
+          <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       </>
     );
@@ -94,22 +212,29 @@ export default function App() {
           activeTab="profile"
           role="patient"
           userName={currentUser.fullName}
-          onTabChange={() => {}}
           onLogout={handleLogout}
         />
 
         <main className="flex-1">
-          {currentUser.patientId ? (
-            <PatientProfilePage
-              patientId={currentUser.patientId}
-              viewerRole="patient"
-              showToast={showToast}
+          <Routes>
+            <Route
+              path="/my-profile"
+              element={
+                currentUser.patientId ? (
+                  <PatientProfilePage
+                    patientId={currentUser.patientId}
+                    viewerRole="patient"
+                    showToast={showToast}
+                  />
+                ) : (
+                  <div className="max-w-7xl mx-auto px-4 py-12 text-center text-gray-500">
+                    No patient record is linked to your account. Please contact the practice.
+                  </div>
+                )
+              }
             />
-          ) : (
-            <div className="max-w-7xl mx-auto px-4 py-12 text-center text-gray-500">
-              No patient record is linked to your account. Please contact the practice.
-            </div>
-          )}
+            <Route path="*" element={<Navigate to="/my-profile" replace />} />
+          </Routes>
         </main>
 
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -117,129 +242,9 @@ export default function App() {
     );
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-[#f8fafc] text-gray-800 antialiased selection:bg-teal-100 selection:text-teal-900">
-      {/* Top Application Navigation Bar matching screenshot */}
-      <Header
-        activeTab={activeTab}
-        userName={currentUser.fullName}
-        onTabChange={(tab) => {
-          if (tab === 'profile') {
-            setActiveTab('manage');
-          } else {
-            setActiveTab(tab);
-          }
-        }}
-        onLogout={handleLogout}
-      />
+  const activeTab = tabForPath(location.pathname);
 
-      {/* Main View Area */}
-      <main className="flex-1">
-        {activeTab === 'register' && (
-          <RegisterPatientPage
-            onPatientCreated={handlePatientCreated}
-            onOpenFormBuilder={handleOpenFormBuilder}
-          />
-        )}
-
-        {activeTab === 'manage' && (
-          <ManagePatientsPage
-            onOpenProfile={handleOpenProfile}
-            onOpenFormBuilder={handleOpenFormBuilder}
-          />
-        )}
-
-        {activeTab === 'profile' && (
-          <PatientProfilePage
-            patientId={selectedPatientId}
-            onBackToSearch={() => setActiveTab('manage')}
-            onOpenFormBuilder={handleOpenFormBuilder}
-            showToast={showToast}
-          />
-        )}
-
-        {activeTab === 'medications' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <Pill className="w-5 h-5 text-[#00695c]" />
-                  Practice Prescription Registry
-                </h1>
-                <p className="text-sm text-gray-500">
-                  Comprehensive audit of active and completed medication courses across all registered patients.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleOpenFormBuilder('add-new-prescription')}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#00695c] bg-teal-50/70 border border-teal-200 rounded-md hover:bg-teal-100/70 transition-colors"
-              >
-                <Settings className="w-4 h-4 text-[#00695c]" />
-                <span>Customize Prescription Schema</span>
-              </button>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-lg shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50/80 border-b border-gray-200 text-xs text-gray-500 font-semibold uppercase tracking-wider">
-                    <tr>
-                      <th className="px-6 py-3.5">Patient</th>
-                      <th className="px-6 py-3.5">Medication</th>
-                      <th className="px-6 py-3.5">Dosage & Frequency</th>
-                      <th className="px-6 py-3.5">Dates</th>
-                      <th className="px-6 py-3.5">Status</th>
-                      <th className="px-6 py-3.5 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {allPatients.flatMap((p) =>
-                      (p.prescriptions || []).map((rx) => (
-                        <tr key={rx.id} className="hover:bg-gray-50/60 transition-colors">
-                          <td className="px-6 py-4 font-semibold text-gray-900">
-                            {p.firstName} {p.lastName}
-                            <div className="text-xs font-normal text-gray-500">NHS: {p.nhsNumber}</div>
-                          </td>
-                          <td className="px-6 py-4 font-medium text-teal-900">{rx.medication}</td>
-                          <td className="px-6 py-4 text-gray-600">
-                            {rx.dosage} • {rx.frequency}
-                          </td>
-                          <td className="px-6 py-4 text-xs text-gray-500">
-                            {rx.startDate} → {rx.endDate || 'Ongoing'}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                                rx.status === 'Active'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-gray-100 text-gray-600 border border-gray-200'
-                              }`}
-                            >
-                              {rx.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenProfile(p.id)}
-                              className="text-xs font-semibold text-[#00695c] hover:underline"
-                            >
-                              View Profile
-                            </button>
-                          </td>
-                        </tr>
-                      )),
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'settings' && (
+  const settingsView = (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs">
               <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -254,7 +259,7 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Form Schema Management Card */}
               <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-[#00695c]" />
                     SurveyJS Schemas
@@ -266,7 +271,7 @@ export default function App() {
                   {FORM_METADATA_LIST.map((form) => (
                     <div
                       key={form.id}
-                      className="p-3.5 rounded-lg border border-gray-150 hover:border-teal-300 transition-colors flex items-center justify-between gap-4"
+                      className="p-3.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors flex items-center justify-between gap-4"
                     >
                       <div className="space-y-0.5">
                         <div className="text-sm font-bold text-gray-900">{form.title}</div>
@@ -288,53 +293,42 @@ export default function App() {
               {/* Clinic Roster & Data Controls */}
               <div className="space-y-6">
                 <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-4">
-                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3">
+                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-3">
                     <Users className="w-4 h-4 text-[#00695c]" />
                     Authorized Clinical Practitioners
                   </h2>
 
                   <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-teal-50/50 border border-teal-100">
-                      <div>
-                        <span className="font-bold text-gray-900">Dr. Sarah Miller</span>
-                        <div className="text-xs text-gray-500">General Practitioner (Current User)</div>
-                      </div>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-semibold">
-                        Logged In
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-gray-50 border border-gray-200">
-                      <div>
-                        <span className="font-medium text-gray-900">Dr. Smith</span>
-                        <div className="text-xs text-gray-500">Cardiology & Internal Medicine</div>
-                      </div>
-                      <span className="text-xs text-gray-500">Active</span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-gray-50 border border-gray-200">
-                      <div>
-                        <span className="font-medium text-gray-900">Dr. Jones</span>
-                        <div className="text-xs text-gray-500">Pediatrics & Family Medicine</div>
-                      </div>
-                      <span className="text-xs text-gray-500">Active</span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-gray-50 border border-gray-200">
-                      <div>
-                        <span className="font-medium text-gray-900">Dr. Williams</span>
-                        <div className="text-xs text-gray-500">Pulmonology & Respiratory</div>
-                      </div>
-                      <span className="text-xs text-gray-500">Active</span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-gray-50 border border-gray-200">
-                      <div>
-                        <span className="font-medium text-gray-900">Nurse James Lee</span>
-                        <div className="text-xs text-gray-500">Senior Practice Nurse</div>
-                      </div>
-                      <span className="text-xs text-gray-500">Active</span>
-                    </div>
+                    {practitioners.map((practitioner) => {
+                      const isCurrentUser = practitioner.username === currentUser.username;
+                      return (
+                        <div
+                          key={practitioner.username}
+                          data-testid="practitioner-row"
+                          className={`flex items-center justify-between p-2.5 rounded-md border ${
+                            isCurrentUser
+                              ? 'bg-teal-50/50 border-teal-100'
+                              : 'bg-gray-50 border-gray-200'
+                          }`}
+                        >
+                          <div>
+                            <span className={`text-gray-900 ${isCurrentUser ? 'font-bold' : 'font-medium'}`}>
+                              {practitioner.fullName}
+                            </span>
+                            <div className="text-xs text-gray-500">
+                              {isCurrentUser ? 'Doctor (Current User)' : 'Doctor'}
+                            </div>
+                          </div>
+                          {isCurrentUser ? (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-semibold">
+                              Logged In
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-500">Active</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -356,7 +350,6 @@ export default function App() {
                         } catch (e) {
                           console.error('Failed to reset demo data:', e);
                         }
-                        setSelectedPatientId('p-emma-thompson');
                         showToast('info', 'Demo Data Reset', 'Initial sample patient records and default SurveyJS forms restored.');
                       }
                     }}
@@ -367,8 +360,55 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            <AppointmentRequestsPanel />
           </div>
-        )}
+  );
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#f8fafc] text-gray-800 antialiased selection:bg-teal-100 selection:text-teal-900">
+      {/* Top Application Navigation Bar matching screenshot */}
+      <Header activeTab={activeTab} userName={currentUser.fullName} onLogout={handleLogout} />
+
+      {/* Main View Area */}
+      <main className="flex-1">
+        <Routes>
+          <Route
+            path="/register"
+            element={
+              <RegisterPatientPage
+                onPatientCreated={handlePatientCreated}
+                onOpenFormBuilder={handleOpenFormBuilder}
+              />
+            }
+          />
+          <Route
+            path="/manage"
+            element={
+              <ManagePatientsPage
+                onOpenProfile={handleOpenProfile}
+                onOpenFormBuilder={handleOpenFormBuilder}
+              />
+            }
+          />
+          <Route
+            path="/patients/:patientId"
+            element={
+              <PatientProfileRoute onOpenFormBuilder={handleOpenFormBuilder} showToast={showToast} />
+            }
+          />
+          <Route
+            path="/medications"
+            element={
+              <MedicationsPage
+                patients={allPatients}
+                onOpenFormBuilder={handleOpenFormBuilder}
+              />
+            }
+          />
+          <Route path="/settings" element={settingsView} />
+          <Route path="*" element={<Navigate to="/manage" replace />} />
+        </Routes>
       </main>
 
       {/* Embedded SurveyJS Form Builder Modal */}
@@ -376,7 +416,16 @@ export default function App() {
         <SurveyCreatorModal
           formId={builderFormId}
           isOpen={true}
-          onClose={() => setBuilderFormId(null)}
+          onClose={() => {
+            builderReturnRef.current = null;
+            setBuilderFormId(null);
+          }}
+          onApplied={() => {
+            setBuilderFormId(null);
+            const restoreView = builderReturnRef.current;
+            builderReturnRef.current = null;
+            restoreView?.();
+          }}
           onSaved={(formId) => {
             showToast(
               'success',

@@ -6,7 +6,8 @@ export type FormId =
   | 'add-new-visit'
   | 'add-new-prescription'
   | 'patient-visits'
-  | 'prescribed-medication';
+  | 'prescribed-medication'
+  | 'appointment-request';
 
 export interface FormMetadata {
   id: FormId;

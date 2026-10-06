@@ -4,7 +4,11 @@ import {
   mergeSurveyIntoPatient,
   mapPatientToSurveyData,
   mapSurveyToVisit,
+  mapVisitToSurveyData,
+  mapVisitsToSurveyData,
   mapSurveyToPrescription,
+  mapPrescriptionToSurveyData,
+  mapPrescriptionsToSurveyData,
 } from '../../src/repositories/surveyMapping';
 import { Patient } from '../../src/types/patient';
 
@@ -37,6 +41,32 @@ const basePatient: Patient = {
   visits: [],
   prescriptions: [],
 };
+
+describe('mapPrescriptionToSurveyData', () => {
+  it('prefills editable prescription fields and converts dates to native input values', () => {
+    expect(
+      mapPrescriptionToSurveyData({
+        id: 'rx-1',
+        medication: 'Amlodipine 5mg Tablets',
+        frequency: 'Once daily',
+        dosage: '1 tablet',
+        unit: 'tablet(s)',
+        startDate: '15/01/2024',
+        endDate: 'Ongoing',
+        instructions: 'Take each morning.',
+        status: 'Active',
+      }),
+    ).toEqual({
+      medication: 'Amlodipine 5mg Tablets',
+      frequency: 'once_daily',
+      question1: '1',
+      unit: 'tablets',
+      start_date: '2024-01-15',
+      end_date: '',
+      instructions: 'Take each morning.',
+    });
+  });
+});
 
 describe('mapSurveyToNewPatient', () => {
   it('maps flat and nested survey fields to a patient', () => {
@@ -106,11 +136,14 @@ describe('mapSurveyToVisit', () => {
       practitioner: 'dr_jones',
       reason_for_visit: 'BP check',
       diagnosis: 'Stable',
+      follow_up_date: '2024-06-15',
     });
 
     expect(visit.visitType).toBe('Follow-up');
     expect(visit.practitioner).toBe('Dr. Jones');
+    // Native date inputs produce ISO yyyy-mm-dd; it must pass through unchanged
     expect(visit.visitDate).toBe('2024-06-01');
+    expect(visit.followUpDate).toBe('2024-06-15');
     expect(visit.reasonForVisit).toBe('BP check');
   });
 
@@ -118,6 +151,56 @@ describe('mapSurveyToVisit', () => {
     const visit = mapSurveyToVisit({ visit_type: 'Home Visit', practitioner: 'Dr. House' });
     expect(visit.visitType).toBe('Home Visit');
     expect(visit.practitioner).toBe('Dr. House');
+  });
+
+  it('resolves an "Other" practitioner from the question comment', () => {
+    const visit = mapSurveyToVisit({
+      practitioner: 'other',
+      'practitioner-Comment': 'Dr. Sarah Miller',
+    });
+    expect(visit.practitioner).toBe('Dr. Sarah Miller');
+  });
+
+  it('falls back to the default practitioner when "Other" has no comment', () => {
+    const visit = mapSurveyToVisit({ practitioner: 'other', 'practitioner-Comment': '  ' });
+    expect(visit.practitioner).toBe('Dr. Sarah Miller');
+  });
+
+  it('maps a visit back to the add-visit survey values', () => {
+    const visit = mapSurveyToVisit({
+      visit_date: '2026-10-06',
+      visit_time: '09:30',
+      visit_type: 'follow_up',
+      practitioner: 'dr_jones',
+      reason_for_visit: 'BP check',
+      diagnosis: 'Stable',
+    });
+
+    expect(mapVisitToSurveyData(visit)).toMatchObject({
+      visit_date: '2026-10-06',
+      visit_time: '09:30',
+      visit_type: 'follow_up',
+      practitioner: 'dr_jones',
+      reason_for_visit: 'BP check',
+      diagnosis: 'Stable',
+    });
+  });
+
+  it('maps a visit history collection to the dynamic panel shape and normalizes dates', () => {
+    expect(mapVisitsToSurveyData([{
+      id: 'v-1',
+      visitDate: '06/10/2026',
+      followUpDate: '20/10/2026',
+      visitType: 'Follow-up',
+      practitioner: 'Dr. Jones',
+    }])).toMatchObject({
+      visit_list: [{
+        visit_date: '2026-10-06',
+        follow_up_date: '2026-10-20',
+        visit_type: 'follow_up',
+        practitioner: 'dr_jones',
+      }],
+    });
   });
 });
 
@@ -143,5 +226,29 @@ describe('mapSurveyToPrescription', () => {
       end_date: '2020-01-01',
     });
     expect(rx.status).toBe('Completed');
+  });
+
+  it('maps a prescription collection to the dynamic panel schema shape', () => {
+    expect(mapPrescriptionsToSurveyData([{
+      id: 'rx-1',
+      medication: 'Amlodipine',
+      frequency: 'Once daily',
+      dosage: '1 tablet',
+      unit: 'tablet(s)',
+      startDate: '15/01/2024',
+      endDate: 'Ongoing',
+      instructions: 'Take each morning.',
+      status: 'Active',
+    }])).toEqual({
+      medications: [{
+        medication: 'Amlodipine',
+        frequency: 'once_daily',
+        question1: '1',
+        unit: 'tablets',
+        start_date: '2024-01-15',
+        end_date: '',
+        instructions: 'Take each morning.',
+      }],
+    });
   });
 });

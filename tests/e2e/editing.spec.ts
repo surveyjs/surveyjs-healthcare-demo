@@ -14,14 +14,16 @@ async function openEmmaProfile(page: Page) {
     .getByRole('button', { name: 'Open Profile' })
     .first()
     .click();
-  await expect(page.getByRole('button', { name: 'Edit Patient' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit Patient', exact: true })).toBeVisible();
 }
 
 test('search form filters the patient list via the database', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'David Miller' })).toBeVisible();
 
-  // The search form is prefilled with the surname "Thompson", shared by several seeded patients
+  // "Thompson" is shared by several seeded patients
+  const lastName = page.getByRole('textbox', { name: 'Last Name' });
+  await lastName.fill('Thompson');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
@@ -29,14 +31,32 @@ test('search form filters the patient list via the database', async ({ page }) =
   await expect(page.getByRole('heading', { name: 'Grace Thompson' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'David Miller' })).toHaveCount(0);
 
+  // Searching must not clear the entered criteria
+  await expect(lastName).toHaveValue('Thompson');
+
   await page.getByRole('button', { name: 'Clear' }).click();
+  await expect(lastName).toHaveValue('');
   await expect(page.getByRole('heading', { name: 'David Miller' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Sophie Bennett' })).toBeVisible();
 });
 
+test('reset filters restores the full patient list after a no-match search', async ({ page }) => {
+  await page.goto('/');
+  const lastName = page.getByRole('textbox', { name: 'Last Name' });
+  await lastName.fill('Zzyzx');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+
+  await expect(page.getByText('No patients matched your search')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Reset filters to view all patients' }).click();
+  await expect(lastName).toHaveValue('');
+  await expect(page.getByRole('heading', { name: 'David Miller' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
+});
+
 test('registering a patient via the SurveyJS form persists it to SQLite', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Register Patient' }).click();
+  await page.getByRole('link', { name: 'Register Patient' }).click();
 
   await page.getByRole('textbox', { name: 'First Name' }).fill('Oliver');
   await page.getByRole('textbox', { name: 'Last Name' }).fill('Stone');
@@ -74,7 +94,7 @@ test('registering a patient via the SurveyJS form persists it to SQLite', async 
 test('editing a patient via the SurveyJS modal saves changes to SQLite', async ({ page }) => {
   await openEmmaProfile(page);
 
-  await page.getByRole('button', { name: 'Edit Patient' }).click();
+  await page.getByRole('button', { name: 'Edit Patient', exact: true }).click();
   const townInput = page.getByRole('textbox', { name: 'Town or city' });
   await expect(townInput).toHaveValue('Bristol');
   await townInput.fill('Manchester');
@@ -84,7 +104,7 @@ test('editing a patient via the SurveyJS modal saves changes to SQLite', async (
 
   // Reload and verify persistence via the prefilled edit form
   await openEmmaProfile(page);
-  await page.getByRole('button', { name: 'Edit Patient' }).click();
+  await page.getByRole('button', { name: 'Edit Patient', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Town or city' })).toHaveValue('Manchester');
 });
 
@@ -92,15 +112,69 @@ test('adding a visit via the SurveyJS modal persists it to SQLite', async ({ pag
   await openEmmaProfile(page);
 
   await page.getByRole('button', { name: 'Add New Visit' }).click();
+
+  // Visit Date is a native date input, prefilled with today and editable
+  const visitDate = page.getByRole('textbox', { name: 'Visit Date' });
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  await expect(visitDate).toHaveAttribute('type', 'date');
+  await expect(visitDate).toHaveValue(today);
+  await visitDate.fill('2026-01-15');
+
+  // Modal forms are single-column: Visit Time renders below Visit Date
+  const dateBox = await visitDate.boundingBox();
+  const timeBox = await page.getByRole('textbox', { name: 'Visit Time' }).boundingBox();
+  expect(timeBox!.y).toBeGreaterThanOrEqual(dateBox!.y + dateBox!.height);
+
   await page.getByRole('textbox', { name: 'Reason for Visit' }).fill('Annual wellbeing review');
   await page.getByRole('textbox', { name: 'Diagnosis' }).fill('Healthy');
   await page.getByRole('button', { name: 'Save Visit' }).click();
 
   await expect(page.getByText('Annual wellbeing review').first()).toBeVisible();
 
-  // Reload and verify persistence
+  // Reload and verify persistence, including the edited visit date (15 Jan 2026)
   await openEmmaProfile(page);
   await expect(page.getByText('Annual wellbeing review').first()).toBeVisible();
+  await expect(page.getByText('Jan 2026').first()).toBeVisible();
+});
+
+test('doctors can edit visits from today but not older visits', async ({ page }) => {
+  await openEmmaProfile(page);
+  await expect(page.getByRole('button', { name: 'Edit visit' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Add New Visit' }).click();
+  const today = new Date();
+  const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  await expect(page.getByRole('textbox', { name: 'Visit Date' })).toHaveValue(todayValue);
+  await page.getByRole('textbox', { name: 'Reason for Visit' }).fill('Visit to edit');
+  await page.getByRole('button', { name: 'Save Visit' }).click();
+
+  const editButton = page.getByRole('button', { name: 'Edit visit' });
+  await expect(editButton).toBeVisible();
+  await editButton.click();
+
+  await expect(page.getByRole('heading', { name: 'Edit Visit' })).toBeVisible();
+  const reason = page.getByRole('textbox', { name: 'Reason for Visit' });
+  await expect(reason).toHaveValue('Visit to edit');
+  await reason.fill('Updated same-day visit');
+  await page.getByRole('button', { name: 'Save Changes' }).click();
+
+  await expect(page.getByText('Visit updated').first()).toBeVisible();
+  await expect(page.getByText('Updated same-day visit').first()).toBeVisible();
+  await expect(page.getByText('Visit to edit', { exact: true })).toHaveCount(0);
+});
+
+test('validation errors appear below the input', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Register Patient' }).click();
+  await page.getByRole('button', { name: 'Save Patient' }).click();
+
+  const error = page.locator('.sd-error').first();
+  await expect(error).toBeVisible();
+
+  const inputBox = await page.getByRole('textbox', { name: 'First Name' }).boundingBox();
+  const errorBox = await error.boundingBox();
+  expect(errorBox!.y).toBeGreaterThanOrEqual(inputBox!.y + inputBox!.height);
 });
 
 test('adding a prescription via the SurveyJS modal persists it to SQLite', async ({ page }) => {
@@ -115,6 +189,72 @@ test('adding a prescription via the SurveyJS modal persists it to SQLite', async
 
   // Also visible in the cross-patient medications registry after reload
   await page.goto('/');
-  await page.getByRole('button', { name: 'Medications' }).click();
+  await page.getByRole('link', { name: 'Medication', exact: true }).click();
   await expect(page.getByRole('cell', { name: /Paracetamol 500mg Tablets/ })).toBeVisible();
+});
+
+test('doctors can edit active prescriptions and completed prescriptions stay read-only', async ({ page }) => {
+  await openEmmaProfile(page);
+
+  const activeEdit = page.getByRole('button', { name: 'Edit prescription: Amlodipine 5mg Tablets' });
+  await expect(activeEdit).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit prescription: Ibuprofen 200mg Tablets' })).toHaveCount(0);
+  await activeEdit.click();
+
+  await expect(page.getByRole('heading', { name: 'Edit Prescription' })).toBeVisible();
+  const medication = page.getByRole('textbox', { name: 'Medication' });
+  await expect(medication).toHaveValue('Amlodipine 5mg Tablets');
+  await expect(page.getByRole('textbox', { name: 'Start Date' })).toHaveValue('2024-01-15');
+  await expect(page.getByRole('textbox', { name: 'End Date' })).toHaveValue('');
+  await medication.fill('Amlodipine 10mg Tablets');
+  await page.getByRole('textbox', { name: 'Instructions' }).fill('Take with breakfast.');
+  await page.getByRole('button', { name: 'Save Changes', exact: true }).click();
+
+  await expect(page.getByText('Prescription updated').first()).toBeVisible();
+  await expect(page.getByText('Amlodipine 10mg Tablets').first()).toBeVisible();
+
+  await openEmmaProfile(page);
+  await page.getByRole('button', { name: 'Edit prescription: Amlodipine 10mg Tablets' }).click();
+  await expect(page.getByRole('textbox', { name: 'Instructions' })).toHaveValue('Take with breakfast.');
+});
+
+test('prescription form exports the current values as a PDF download', async ({ page }) => {
+  await openEmmaProfile(page);
+  await page.getByRole('button', { name: 'Add New Prescription' }).click();
+  await page.getByRole('textbox', { name: 'Medication' }).fill('Paracetamol 500mg Tablets');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Preview and Print' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/thompson-paracetamol-500mg-tablets\.pdf/);
+});
+
+test('visit modal defaults the practitioner to the signed-in doctor and never flashes the completion page', async ({
+  page,
+}) => {
+  await openEmmaProfile(page);
+
+  // Delay the save API so a rendered completion page would stay visible long enough to be caught
+  await page.route('**/api/patients/*/visits', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await route.continue();
+  });
+
+  await page.getByRole('button', { name: 'Add New Visit' }).click();
+
+  // Dr. Sarah Miller is not among the schema's practitioner choices, so the
+  // dropdown selects "Other" and carries her name in the comment field
+  const practitionerQuestion = page.locator('[data-name="practitioner"]');
+  await expect(practitionerQuestion.locator('.sd-dropdown__input')).toContainText('Other');
+  await expect(practitionerQuestion.locator('textarea')).toHaveValue('Dr. Sarah Miller');
+
+  await page.getByRole('textbox', { name: 'Reason for Visit' }).fill('Completion flash check');
+  await page.getByRole('button', { name: 'Save Visit' }).click();
+
+  // While the save request is in flight the completion page must not render
+  await expect(page.locator('.sd-completedpage')).toHaveCount(0);
+  await expect(page.getByText('Thank you for completing the survey')).toHaveCount(0);
+
+  await expect(page.getByText('Completion flash check').first()).toBeVisible();
+  await expect(page.getByText('Practitioner: Dr. Sarah Miller').first()).toBeVisible();
 });

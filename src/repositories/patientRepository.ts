@@ -4,7 +4,9 @@ import {
   mergeSurveyIntoPatient,
   mapPatientToSurveyData,
   mapSurveyToVisit,
+  mapVisitToSurveyData,
   mapSurveyToPrescription,
+  mapPrescriptionToSurveyData,
 } from './surveyMapping';
 
 const API_BASE = '/api';
@@ -79,6 +81,20 @@ export const patientRepository = {
     return result.visit;
   },
 
+  async updateVisit(patientId: string, visitId: string, visitData: Record<string, any>): Promise<Visit> {
+    const visit = { ...mapSurveyToVisit(visitData), id: visitId };
+    const result = await request<{ visit: Visit; patient: Patient }>(
+      `/patients/${encodeURIComponent(patientId)}/visits/${encodeURIComponent(visitId)}`,
+      { method: 'PUT', body: JSON.stringify(visit) },
+    );
+    notifyListeners();
+    return result.visit;
+  },
+
+  mapVisitToSurveyData(visit: Visit): Record<string, any> {
+    return mapVisitToSurveyData(visit);
+  },
+
   async removeVisit(patientId: string, visitId: string): Promise<void> {
     await request<{ status: string }>(
       `/patients/${encodeURIComponent(patientId)}/visits/${encodeURIComponent(visitId)}`,
@@ -95,6 +111,24 @@ export const patientRepository = {
     );
     notifyListeners();
     return result.prescription;
+  },
+
+  async updatePrescription(
+    patientId: string,
+    prescriptionId: string,
+    rxData: Record<string, any>,
+  ): Promise<Prescription> {
+    const prescription = { ...mapSurveyToPrescription(rxData), id: prescriptionId };
+    const result = await request<{ prescription: Prescription; patient: Patient }>(
+      `/patients/${encodeURIComponent(patientId)}/prescriptions/${encodeURIComponent(prescriptionId)}`,
+      { method: 'PUT', body: JSON.stringify(prescription) },
+    );
+    notifyListeners();
+    return result.prescription;
+  },
+
+  mapPrescriptionToSurveyData(prescription: Prescription): Record<string, any> {
+    return mapPrescriptionToSurveyData(prescription);
   },
 
   async searchPatients(query: { lastName?: string; dateOfBirth?: string; nhsNumber?: string }): Promise<Patient[]> {

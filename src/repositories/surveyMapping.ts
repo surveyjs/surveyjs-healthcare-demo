@@ -1,6 +1,14 @@
 import { Patient, Visit, Prescription } from '../types/patient';
 import { calculateAge } from '../utils/age';
 
+function dateForSurveyInput(value?: string): string {
+  if (!value || value === 'Ongoing') return '';
+  const isoDate = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoDate) return isoDate[1];
+  const ukDate = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return ukDate ? `${ukDate[3]}-${ukDate[2]}-${ukDate[1]}` : '';
+}
+
 export function mapSurveyToNewPatient(surveyData: Record<string, any>): Patient {
   const dob = surveyData.date_of_birth || '';
   const age = calculateAge(dob);
@@ -97,7 +105,12 @@ export function mapPatientToSurveyData(patient: Patient): Record<string, any> {
 }
 
 export function mapSurveyToVisit(visitData: Record<string, any>): Visit {
-  const practitionerValue = visitData.practitioner || 'Dr. Sarah Miller';
+  // A "Other" selection stores the practitioner name in the question comment
+  const practitionerRaw =
+    visitData.practitioner === 'other'
+      ? String(visitData['practitioner-Comment'] ?? '').trim()
+      : visitData.practitioner;
+  const practitionerValue = practitionerRaw || 'Dr. Sarah Miller';
   const practitionerMap: Record<string, string> = {
     dr_smith: 'Dr. Smith',
     dr_jones: 'Dr. Jones',
@@ -128,6 +141,39 @@ export function mapSurveyToVisit(visitData: Record<string, any>): Visit {
   };
 }
 
+export function mapVisitToSurveyData(visit: Visit): Record<string, any> {
+  const visitTypeValues: Record<string, string> = {
+    'GP Consultation': 'consultation',
+    'Follow-up': 'follow_up',
+    Emergency: 'emergency',
+    Routine: 'routine',
+  };
+  const practitionerValues: Record<string, string> = {
+    'Dr. Smith': 'dr_smith',
+    'Dr. Jones': 'dr_jones',
+    'Dr. Williams': 'dr_williams',
+  };
+  const practitionerValue = practitionerValues[visit.practitioner];
+
+  return {
+    visit_date: dateForSurveyInput(visit.visitDate),
+    visit_time: visit.visitTime || '',
+    visit_type: visitTypeValues[visit.visitType] || visit.visitType,
+    practitioner: practitionerValue || 'other',
+    ...(practitionerValue ? {} : { 'practitioner-Comment': visit.practitioner }),
+    reason_for_visit: visit.reasonForVisit || '',
+    diagnosis: visit.diagnosis || '',
+    follow_up_date: dateForSurveyInput(visit.followUpDate),
+    symptoms_notes: visit.symptomsNotes || '',
+    treatment_recommendations: visit.treatmentRecommendations || '',
+    internal_notes: visit.internalNotes || '',
+  };
+}
+
+export function mapVisitsToSurveyData(visits: Visit[]): Record<string, any> {
+  return { visit_list: visits.map(mapVisitToSurveyData) };
+}
+
 export function mapSurveyToPrescription(rxData: Record<string, any>): Prescription {
   const freqMap: Record<string, string> = {
     once_daily: 'Once daily',
@@ -152,4 +198,39 @@ export function mapSurveyToPrescription(rxData: Record<string, any>): Prescripti
     instructions: rxData.instructions || '',
     status: rxData.end_date && new Date(rxData.end_date) < new Date() ? 'Completed' : 'Active',
   };
+}
+
+export function mapPrescriptionToSurveyData(prescription: Prescription): Record<string, any> {
+  const frequencyValues: Record<string, string> = {
+    'Once daily': 'once_daily',
+    'Twice daily': 'twice_daily',
+    'Three times daily': 'three_times_daily',
+    'Four times daily': 'four_times_daily',
+    'As needed': 'as_needed',
+  };
+  const unitValues: Record<string, string> = {
+    'tablet(s)': 'tablets',
+    'capsule(s)': 'capsules',
+    'unit(s)': 'units',
+    'drop(s)': 'drops',
+    'puff(s)': 'puffs',
+    'spray(s)': 'sprays',
+    'patch(es)': 'patches',
+  };
+  const dosage = String(prescription.dosage || '');
+  const doseAmount = dosage.match(/^\s*(\d+(?:\.\d+)?)/)?.[1] || '';
+
+  return {
+    medication: prescription.medication,
+    frequency: frequencyValues[prescription.frequency || ''] || prescription.frequency || '',
+    question1: doseAmount,
+    unit: unitValues[prescription.unit || ''] || prescription.unit || '',
+    start_date: dateForSurveyInput(prescription.startDate),
+    end_date: dateForSurveyInput(prescription.endDate),
+    instructions: prescription.instructions || '',
+  };
+}
+
+export function mapPrescriptionsToSurveyData(prescriptions: Prescription[]): Record<string, any> {
+  return { medications: prescriptions.map(mapPrescriptionToSurveyData) };
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from '../components/layout/Sidebar';
 import { PatientCard } from '../components/patients/PatientCard';
 import { SurveyRenderer } from '../survey/SurveyRenderer';
@@ -22,25 +22,31 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
   const [schemaVersion, setSchemaVersion] = useState(0);
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  // Last-write-wins: a slow earlier request (e.g. the initial load) must not overwrite newer results
+  const requestSeqRef = useRef(0);
+
+  const applyResults = async (fetcher: () => Promise<Patient[]>) => {
+    const requestId = ++requestSeqRef.current;
+    const results = await fetcher();
+    if (requestId === requestSeqRef.current) {
+      setSearchResults(results);
+      setHasSearched(true);
+    }
+  };
 
   // Initial load: show all patients from the database
   useEffect(() => {
-    patientRepository
-      .getAllPatients()
-      .then((all) => {
-        setSearchResults(all);
-        setHasSearched(true);
-      })
-      .catch((e) => console.error('Failed to load patients:', e));
+    applyResults(() => patientRepository.getAllPatients()).catch((e) =>
+      console.error('Failed to load patients:', e),
+    );
   }, []);
 
   // Subscribe to changes in patients or schema
   useEffect(() => {
     const unsubPatients = patientRepository.subscribe(() => {
-      patientRepository
-        .getAllPatients()
-        .then(setSearchResults)
-        .catch((e) => console.error('Failed to reload patients:', e));
+      applyResults(() => patientRepository.getAllPatients()).catch((e) =>
+        console.error('Failed to reload patients:', e),
+      );
     });
 
     const unsubForms = formRepository.subscribe((changedId) => {
@@ -57,22 +63,15 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
 
   const schema = formRepository.getForm('patient-search');
 
-  // Prefill with a surname shared by several seeded patients so the default search returns results
-  const initialData = useMemo(() => {
-    return {
-      last_name: 'Thompson',
-    };
-  }, []);
-
   const handleSearchExecute = async (data: Record<string, any>) => {
     try {
-      const results = await patientRepository.searchPatients({
-        lastName: data.last_name,
-        dateOfBirth: data.date_of_birth,
-        nhsNumber: data['nhs-number'],
-      });
-      setSearchResults(results);
-      setHasSearched(true);
+      await applyResults(() =>
+        patientRepository.searchPatients({
+          lastName: data.last_name,
+          dateOfBirth: data.date_of_birth,
+          nhsNumber: data['nhs-number'],
+        }),
+      );
     } catch (e) {
       console.error('Search failed:', e);
     }
@@ -80,20 +79,17 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
 
   const handleSearchClick = () => {
     if (surveyModel) {
-      // Enforce required fields (last name) before searching
-      if (!surveyModel.validate()) return;
       handleSearchExecute(surveyModel.data || {});
     }
   };
 
   const handleClearClick = async () => {
     if (surveyModel) {
-      surveyModel.clear(false, true);
+      // clear(true) empties the fields; clear(false) would only reset the survey state
+      surveyModel.clear(true, true);
     }
     try {
-      const all = await patientRepository.getAllPatients();
-      setSearchResults(all);
-      setHasSearched(true);
+      await applyResults(() => patientRepository.getAllPatients());
     } catch (e) {
       console.error('Failed to reload patients:', e);
     }
@@ -109,7 +105,7 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
         <div className="flex-1 w-full space-y-6">
           {/* Search Card */}
           <div className="bg-white border border-gray-200 rounded-lg p-6 sm:p-8 shadow-xs space-y-6">
-            <h2 className="text-xl font-bold text-gray-900 border-b border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-3">
               Search for a Patient
             </h2>
 
@@ -118,15 +114,18 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
               <SurveyRenderer
                 key={`search-${schemaVersion}`}
                 schema={schema}
-                initialData={initialData}
                 onComplete={handleSearchExecute}
                 showNavigationButtons={false}
-                onModelReady={(model) => setSurveyModel(model)}
+                onModelReady={(model) => {
+                  // Commit text per keystroke; blur-commit text can be wiped by a re-render before Search reads it
+                  model.textUpdateMode = 'onTyping';
+                  setSurveyModel(model);
+                }}
               />
             </div>
 
             {/* Search Actions matching screenshot */}
-            <div className="pt-6 border-t border-gray-150 flex flex-wrap items-center justify-between gap-4">
+            <div className="pt-6 border-t border-gray-200 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -153,7 +152,7 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[#00695c] bg-white border border-[#00695c] rounded-md hover:bg-teal-50 transition-colors cursor-pointer"
               >
                 <Settings className="w-4 h-4 text-[#00695c]" />
-                <span>Customize Search Form</span>
+                <span>Customize Patient Search Form</span>
               </button>
             </div>
           </div>

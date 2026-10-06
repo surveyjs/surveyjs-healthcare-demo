@@ -25,7 +25,20 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onOpenProfile
     : 'Unknown';
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-teal-300">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenProfile(patient.id)}
+      onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenProfile(patient.id);
+        }
+      }}
+      aria-label="Open Profile"
+      aria-describedby={`patient-${patient.id}-name`}
+      className="w-full appearance-none text-left bg-white border border-gray-200 rounded-lg p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors hover:border-gray-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00695c] cursor-pointer"
+    >
       <div className="flex items-start gap-4">
         {/* Teal Initials Avatar */}
         <div className="w-14 h-14 rounded-full bg-[#b2dfdb] text-[#004d40] flex items-center justify-center font-bold text-xl shrink-0 shadow-2xs">
@@ -35,14 +48,9 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onOpenProfile
         {/* Info cluster */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-gray-900 tracking-tight">
+              <h3 id={`patient-${patient.id}-name`} className="text-lg font-bold text-gray-900 tracking-tight">
               {patient.firstName} {patient.lastName}
             </h3>
-            {patient.status === 'Active' && (
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
-                Active
-              </span>
-            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-gray-600">
@@ -70,16 +78,12 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onOpenProfile
         </div>
       </div>
 
-      {/* Action button matching screenshot */}
+      {/* Action label stays visible while the full card is the button. */}
       <div className="self-end md:self-center shrink-0">
-        <button
-          type="button"
-          onClick={() => onOpenProfile(patient.id)}
-          className="inline-flex items-center gap-2 bg-[#00695c] hover:bg-[#004d40] text-white text-sm font-medium px-4 py-2 rounded-md shadow-xs transition-colors cursor-pointer"
-        >
+        <span className="inline-flex items-center gap-2 bg-[#00695c] text-white text-sm font-medium px-4 py-2 rounded-md shadow-xs">
           <UserCheck className="w-4 h-4" />
           <span>Open Profile</span>
-        </button>
+        </span>
       </div>
     </div>
   );

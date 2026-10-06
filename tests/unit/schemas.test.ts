@@ -7,6 +7,7 @@ import addNewVisit from '../../src/survey/schemas/add-new-visit.json';
 import addNewPrescription from '../../src/survey/schemas/add-new-prescription.json';
 import patientVisits from '../../src/survey/schemas/patient-visits.json';
 import prescribedMedication from '../../src/survey/schemas/prescribed-medication.json';
+import appointmentRequest from '../../src/survey/schemas/appointment-request.json';
 import login from '../../src/survey/schemas/login.json';
 
 const schemas: Record<string, object> = {
@@ -18,6 +19,7 @@ const schemas: Record<string, object> = {
   'add-new-prescription': addNewPrescription,
   'patient-visits': patientVisits,
   'prescribed-medication': prescribedMedication,
+  'appointment-request': appointmentRequest,
 };
 
 describe('survey schema lint gate', () => {

@@ -14,3 +14,19 @@ export async function bypassLoginAsDoctor(page: Page): Promise<void> {
     );
   });
 }
+
+/** Injects a stored patient session (Emma Thompson) for patient-portal specs. */
+export async function bypassLoginAsPatient(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'hc-auth-user',
+      JSON.stringify({
+        id: 'u-emma-thompson',
+        username: 'emma.thompson',
+        fullName: 'Emma Thompson',
+        role: 'patient',
+        patientId: 'p-emma-thompson',
+      }),
+    );
+  });
+}

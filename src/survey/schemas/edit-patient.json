@@ -14,7 +14,6 @@
         {
           "type": "text",
           "name": "last_name",
-          "startWithNewLine": false,
           "title": "Last Name",
           "isRequired": true,
           "autocomplete": "name"
@@ -30,7 +29,6 @@
         {
           "type": "dropdown",
           "name": "gender",
-          "startWithNewLine": false,
           "title": "Gender at Birth",
           "isRequired": true,
           "choices": [
@@ -47,7 +45,6 @@
         {
           "type": "text",
           "name": "phone_number",
-          "startWithNewLine": false,
           "title": "Phone Number",
           "description": "E.g. 07123 456789",
           "descriptionLocation": "underInput",
@@ -73,7 +70,6 @@
         {
           "type": "text",
           "name": "email",
-          "startWithNewLine": false,
           "title": "Email",
           "description": "full.name@example.com",
           "descriptionLocation": "underInput",
@@ -95,9 +91,8 @@
             {
               "type": "text",
               "name": "address-line-2",
-              "startWithNewLine": false,
               "title": "Address line 2",
-              "description": "apartment, building, locality (optional)"
+              "description": "apartment, building, locality"
             },
             {
               "type": "text",
@@ -107,9 +102,7 @@
             {
               "type": "text",
               "name": "county",
-              "startWithNewLine": false,
-              "title": "County",
-              "description": "(optional)"
+              "title": "County"
             },
             {
               "type": "text",
@@ -123,7 +116,6 @@
             {
               "type": "dropdown",
               "name": "country",
-              "startWithNewLine": false,
               "title": "Country",
               "defaultValue": "United Kingdom",
               "choices": [

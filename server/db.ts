@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { AppointmentRequest } from '../src/types/appointmentRequest';
 import { Patient, Visit, Prescription } from '../src/types/patient';
 import { AuthUser, RosterEntry, UserRole } from '../src/types/auth';
 import { INITIAL_PATIENTS, INITIAL_USERS } from '../src/data/initialData';
@@ -80,6 +81,14 @@ CREATE TABLE IF NOT EXISTS users (
   patient_id    TEXT,
   seq           INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS appointment_requests (
+  id           TEXT PRIMARY KEY,
+  patient_id   TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  request_data TEXT NOT NULL,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_appointment_requests_patient ON appointment_requests(patient_id);
 `;
 
 function hashPassword(password: string): string {
@@ -141,12 +150,28 @@ export function createDb(dbPath: string) {
     )
   `);
 
+  const updateVisitStmt = db.prepare(`
+    UPDATE visits SET
+      visit_date = @visitDate, visit_time = @visitTime, visit_type = @visitType,
+      practitioner = @practitioner, reason_for_visit = @reasonForVisit, diagnosis = @diagnosis,
+      treatment_recommendations = @treatmentRecommendations, follow_up_date = @followUpDate,
+      symptoms_notes = @symptomsNotes, internal_notes = @internalNotes
+    WHERE patient_id = @patientId AND id = @id AND visit_date = @today
+  `);
+
   const insertPrescriptionStmt = db.prepare(`
     INSERT INTO prescriptions (
       id, patient_id, medication, frequency, dosage, unit, start_date, end_date, instructions, status, seq
     ) VALUES (
       @id, @patientId, @medication, @frequency, @dosage, @unit, @startDate, @endDate, @instructions, @status, @seq
     )
+  `);
+
+  const updatePrescriptionStmt = db.prepare(`
+    UPDATE prescriptions SET
+      medication = @medication, frequency = @frequency, dosage = @dosage, unit = @unit,
+      start_date = @startDate, end_date = @endDate, instructions = @instructions, status = @status
+    WHERE patient_id = @patientId AND id = @id AND status = 'Active'
   `);
 
   function patientToParams(p: Patient, seq: number) {
@@ -289,6 +314,13 @@ export function createDb(dbPath: string) {
     return r.s;
   }
 
+  function todayISODate(): string {
+    const date = new Date();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+  }
+
   const insertFullPatient = db.transaction((patient: Patient, seq: number) => {
     insertPatientStmt.run(patientToParams(patient, seq));
     const visits = patient.visits || [];
@@ -406,11 +438,62 @@ export function createDb(dbPath: string) {
       return withId;
     },
 
+    updateVisit(patientId: string, visitId: string, visit: Visit): Visit | undefined {
+      const today = todayISODate();
+      if (visit.visitDate !== today) return undefined;
+      const withId: Visit = { ...visit, id: visitId };
+      const params = visitToParams(patientId, withId, 0);
+      const result = updateVisitStmt.run({ ...params, today });
+      return result.changes > 0 ? withId : undefined;
+    },
+
     addPrescription(patientId: string, rx: Prescription): Prescription | undefined {
       if (!db.prepare('SELECT id FROM patients WHERE id = ?').get(patientId)) return undefined;
       const withId: Prescription = { ...rx, id: rx.id || `rx-${Date.now()}` };
       insertPrescriptionStmt.run(prescriptionToParams(patientId, withId, nextSeq('prescriptions', patientId)));
       return withId;
+    },
+
+    updatePrescription(patientId: string, prescriptionId: string, rx: Prescription): Prescription | undefined {
+      const withId: Prescription = { ...rx, id: prescriptionId };
+      const result = updatePrescriptionStmt.run(prescriptionToParams(patientId, withId, 0));
+      return result.changes > 0 ? withId : undefined;
+    },
+
+    createAppointmentRequest(
+      patientId: string,
+      requestData: Record<string, unknown>,
+    ): AppointmentRequest | undefined {
+      if (!db.prepare('SELECT id FROM patients WHERE id = ?').get(patientId)) return undefined;
+      const id = `ar-${randomUUID()}`;
+      db.prepare(
+        'INSERT INTO appointment_requests (id, patient_id, request_data) VALUES (?, ?, ?)',
+      ).run(id, patientId, JSON.stringify(requestData));
+      return this.listAppointmentRequests().find((request) => request.id === id);
+    },
+
+    listAppointmentRequests(): AppointmentRequest[] {
+      const rows = db.prepare(`
+        SELECT ar.id, ar.patient_id, ar.request_data, ar.created_at,
+               p.first_name, p.last_name
+        FROM appointment_requests ar
+        JOIN patients p ON p.id = ar.patient_id
+        ORDER BY ar.rowid DESC
+      `).all() as {
+        id: string;
+        patient_id: string;
+        request_data: string;
+        created_at: string;
+        first_name: string;
+        last_name: string;
+      }[];
+      return rows.map((row) => ({
+        id: row.id,
+        patientId: row.patient_id,
+        patientName: `${row.first_name} ${row.last_name}`,
+        requestData: JSON.parse(row.request_data) as Record<string, unknown>,
+        createdAt: row.created_at,
+      }));
     },
 
     removeVisit(patientId: string, visitId: string): boolean {
@@ -422,6 +505,7 @@ export function createDb(dbPath: string) {
 
     resetToInitial(): void {
       const wipeAndSeed = db.transaction(() => {
+        db.prepare('DELETE FROM appointment_requests').run();
         db.prepare('DELETE FROM prescriptions').run();
         db.prepare('DELETE FROM visits').run();
         db.prepare('DELETE FROM patients').run();
