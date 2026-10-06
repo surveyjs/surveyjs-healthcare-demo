@@ -174,7 +174,7 @@ export function MedicationsPage({
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={`${row.patientId}-${row.medication}-${row.startDate}`} className="hover:bg-gray-50/60 transition-colors">
+                  <tr key={`${row.patientId}-${row.prescription.id}`} className="hover:bg-gray-50/60 transition-colors">
                     <td className="px-5 py-4 font-semibold text-gray-900">{row.patientName}</td>
                     <td className="px-5 py-4 text-gray-600">{row.nhsNumber}</td>
                     <td className="px-5 py-4 font-medium text-teal-900">{row.medication}</td>
