@@ -45,6 +45,7 @@ export const AppointmentRequestModal: React.FC<AppointmentRequestModalProps> = (
     try {
       await appointmentRepository.create(patient.id, data);
       onSubmitted();
+      setIsSubmitting(false);
       onClose();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The request could not be submitted.');
