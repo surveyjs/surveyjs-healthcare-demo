@@ -24,7 +24,7 @@ The application implements a realistic clinical workflow, split by user role:
 ### Patient portal use cases
 
 - **My profile** — a patient signs in and sees only their own record and read-only visit/medication history
-- **Request an appointment** — submit a SurveyJS request prefilled with the patient's contact details; a confirmation toast appears after it is stored
+- **Request an appointment** — submit a keyboard-accessible SurveyJS modal prefilled with the patient's contact details; focus is managed while it is open and restored when it closes, including with Escape; a confirmation toast appears after it is stored
 - **Staff review** — submitted requests appear in Inpatient Settings, where the practitioner list is loaded from the account roster and marks the signed-in doctor
 
 ## Navigation & URLs

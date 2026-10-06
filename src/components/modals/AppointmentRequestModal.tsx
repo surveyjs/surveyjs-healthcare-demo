@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Patient } from '../../types/patient';
 import { formRepository } from '../../repositories/formRepository';
@@ -21,6 +21,8 @@ export const AppointmentRequestModal: React.FC<AppointmentRequestModalProps> = (
   const [schema, setSchema] = useState(() => formRepository.getForm('appointment-request'));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const dialogRef = useRef<HTMLElement>(null);
+  const onCloseRef = useRef(onClose);
   const initialData = useMemo(
     () => ({
       patient_name: `${patient.firstName} ${patient.lastName}`,
@@ -37,6 +39,64 @@ export const AppointmentRequestModal: React.FC<AppointmentRequestModalProps> = (
       setSchema(formRepository.getForm('appointment-request'));
     }
   }), []);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previouslyFocusedElement = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const dialog = dialogRef.current;
+    const getFocusableElements = (): HTMLElement[] => {
+      const elements = dialog?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      const focusableElements: HTMLElement[] = [];
+      elements?.forEach((element) => {
+        if (element instanceof HTMLElement && element.getClientRects().length > 0) {
+          focusableElements.push(element);
+        }
+      });
+      return focusableElements;
+    };
+
+    (getFocusableElements()[0] ?? dialog)?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !dialog) return;
+
+      const focusableElements = getFocusableElements();
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (!firstElement || !lastElement) {
+        event.preventDefault();
+        dialog.focus();
+      } else if (event.shiftKey && (document.activeElement === firstElement || !dialog.contains(document.activeElement))) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && (document.activeElement === lastElement || !dialog.contains(document.activeElement))) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocusedElement?.focus();
+    };
+  }, [isOpen]);
 
   const handleComplete = async (data: Record<string, unknown>) => {
     if (isSubmitting) return;
@@ -58,9 +118,11 @@ export const AppointmentRequestModal: React.FC<AppointmentRequestModalProps> = (
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs">
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="appointment-request-title"
+        tabIndex={-1}
         className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200"
       >
         <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">

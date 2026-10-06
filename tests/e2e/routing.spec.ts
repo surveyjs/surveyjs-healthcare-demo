@@ -165,6 +165,26 @@ test.describe('patient portal routes', () => {
     await expect(page.getByRole('link', { name: 'My Profile' })).toBeVisible();
   });
 
+  test('appointment request modal manages keyboard focus', async ({ page }) => {
+    await page.goto('/my-profile');
+    const trigger = page.getByRole('button', { name: 'Request an Appointment' });
+    await trigger.click();
+
+    const dialog = page.getByRole('dialog', { name: 'Request an Appointment' });
+    const closeButton = dialog.getByRole('button', { name: 'Close appointment request' });
+    const cancelButton = dialog.getByRole('button', { name: 'Cancel' });
+    await expect(closeButton).toBeFocused();
+
+    await page.keyboard.press('Shift+Tab');
+    await expect(cancelButton).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(closeButton).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+
   test('patient portal hides staff controls and sends appointment requests to staff', async ({ page }) => {
     await page.goto('/my-profile');
     const patientHeading = page.getByRole('heading', { name: 'Emma Thompson', exact: true });
