@@ -32,6 +32,7 @@ function PatientProfileRoute({
   const navigate = useNavigate();
   return (
     <PatientProfilePage
+      key={patientId}
       patientId={patientId!}
       onBackToSearch={() => navigate('/manage')}
       onOpenFormBuilder={onOpenFormBuilder}
