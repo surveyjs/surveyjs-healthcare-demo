@@ -84,6 +84,7 @@ export const AppointmentRequestModal: React.FC<AppointmentRequestModalProps> = (
             initialData={initialData}
             onComplete={handleComplete}
             showCompletePage={false}
+            className="survey-modal"
           />
         </div>
 
