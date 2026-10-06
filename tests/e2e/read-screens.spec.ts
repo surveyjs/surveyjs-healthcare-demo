@@ -44,3 +44,37 @@ test('medications registry iterates prescriptions of all patients from the datab
   await expect(page.getByRole('cell', { name: /Ibuprofen 200mg Tablets/ })).toBeVisible();
   await expect(page.getByRole('cell', { name: /Salbutamol 100mcg Inhaler/ })).toBeVisible();
 });
+
+test('medications registry filters, sorts, clears filters, and exposes row actions', async ({ page }) => {
+  await page.goto('/medications');
+
+  const table = page.getByRole('table');
+  await page.getByLabel('Filter by patient name').fill('Emma');
+  await expect(table.getByRole('row')).toHaveCount(3);
+  await expect(table.getByText('Amlodipine 5mg Tablets')).toBeVisible();
+  await expect(table.getByText('Ibuprofen 200mg Tablets')).toBeVisible();
+  await expect(table.getByText('Salbutamol 100mcg Inhaler')).toHaveCount(0);
+
+  await page.getByLabel('Filter by patient name').fill('');
+  await page.getByLabel('Filter by NHS number').fill('832 918 3491');
+  await expect(table.getByRole('row')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await page.getByLabel('Filter by medication').fill('salbutamol');
+  await expect(table.getByRole('row')).toHaveCount(2);
+  await page.getByLabel('Filter by medication').fill('');
+  await page.getByLabel('Filter by status').selectOption('Completed');
+  await expect(table.getByRole('row')).toHaveCount(2);
+  await expect(table.getByText('Ibuprofen 200mg Tablets')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await page.getByRole('button', { name: 'Sort by Patient' }).click();
+  await expect(table.locator('tbody tr').first()).toContainText('Sophie Bennett');
+  await expect(table.getByRole('columnheader', { name: /Patient/ })).toHaveAttribute('aria-sort', 'descending');
+
+  const emmaRow = table.locator('tbody tr').filter({ hasText: 'Amlodipine 5mg Tablets' });
+  await emmaRow.getByRole('link', { name: 'View Patient' }).click();
+  await expect(page).toHaveURL(/\/patients\/p-emma-thompson$/);
+  await page.goto('/medications');
+  await page.getByRole('button', { name: 'View Medication Record' }).first().click();
+  await expect(page.getByText('Opening individual medication records will be available in a future update.')).toBeVisible();
+});

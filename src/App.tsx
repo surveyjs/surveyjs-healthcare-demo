@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useParams, useLocation } from 're
 import { Header, NavTab } from './components/layout/Header';
 import { RegisterPatientPage } from './pages/RegisterPatientPage';
 import { ManagePatientsPage } from './pages/ManagePatientsPage';
+import { MedicationsPage } from './pages/MedicationsPage';
 import { PatientProfilePage } from './pages/PatientProfilePage';
 import { LoginPage } from './pages/LoginPage';
 import { SurveyCreatorModal } from './survey/SurveyCreatorModal';
@@ -13,7 +14,7 @@ import { AuthUser } from './types/auth';
 import { patientRepository } from './repositories/patientRepository';
 import { authRepository } from './repositories/authRepository';
 import { formRepository, FORM_METADATA_LIST } from './repositories/formRepository';
-import { Pill, ShieldCheck, Settings, Users, Sparkles, Building2 } from 'lucide-react';
+import { ShieldCheck, Settings, Users, Sparkles, Building2 } from 'lucide-react';
 
 type ShowToast = (type: 'success' | 'error' | 'info', title: string, message?: string) => void;
 
@@ -161,87 +162,6 @@ export default function App() {
   }
 
   const activeTab = tabForPath(location.pathname);
-
-  const medicationsView = (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <Pill className="w-5 h-5 text-[#00695c]" />
-                  Practice Medication Overview
-                </h1>
-                <p className="text-sm text-gray-500">
-                  View active and past medication records across all registered patients.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleOpenFormBuilder('add-new-prescription')}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#00695c] bg-teal-50/70 border border-teal-200 rounded-md hover:bg-teal-100/70 transition-colors"
-              >
-                <Settings className="w-4 h-4 text-[#00695c]" />
-                <span>Customize Medication Prescription Form</span>
-              </button>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-lg shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50/80 border-b border-gray-200 text-xs text-gray-500 font-semibold uppercase tracking-wider">
-                    <tr>
-                      <th className="px-6 py-3.5">Patient</th>
-                      <th className="px-6 py-3.5">Medication</th>
-                      <th className="px-6 py-3.5">Dosage & Frequency</th>
-                      <th className="px-6 py-3.5">Dates</th>
-                      <th className="px-6 py-3.5">Status</th>
-                      <th className="px-6 py-3.5 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {allPatients.flatMap((p) =>
-                      (p.prescriptions || []).map((rx) => (
-                        <tr key={rx.id} className="hover:bg-gray-50/60 transition-colors">
-                          <td className="px-6 py-4 font-semibold text-gray-900">
-                            {p.firstName} {p.lastName}
-                            <div className="text-xs font-normal text-gray-500">NHS: {p.nhsNumber}</div>
-                          </td>
-                          <td className="px-6 py-4 font-medium text-teal-900">{rx.medication}</td>
-                          <td className="px-6 py-4 text-gray-600">
-                            {rx.dosage} • {rx.frequency}
-                          </td>
-                          <td className="px-6 py-4 text-xs text-gray-500">
-                            {rx.startDate} → {rx.endDate || 'Ongoing'}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                                rx.status === 'Active'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-gray-100 text-gray-600 border border-gray-200'
-                              }`}
-                            >
-                              {rx.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenProfile(p.id)}
-                              className="text-xs font-semibold text-[#00695c] hover:underline"
-                            >
-                              View Profile
-                            </button>
-                          </td>
-                        </tr>
-                      )),
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-  );
 
   const settingsView = (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -405,7 +325,16 @@ export default function App() {
               <PatientProfileRoute onOpenFormBuilder={handleOpenFormBuilder} showToast={showToast} />
             }
           />
-          <Route path="/medications" element={medicationsView} />
+          <Route
+            path="/medications"
+            element={
+              <MedicationsPage
+                patients={allPatients}
+                onOpenFormBuilder={handleOpenFormBuilder}
+                showToast={showToast}
+              />
+            }
+          />
           <Route path="/settings" element={settingsView} />
           <Route path="*" element={<Navigate to="/manage" replace />} />
         </Routes>
