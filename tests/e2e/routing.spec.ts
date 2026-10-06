@@ -66,6 +66,30 @@ test.describe('staff routes', () => {
     await expect(page).toHaveURL(/\/manage$/);
   });
 
+  test('Inpatient Settings identifies the authenticated doctor for each seeded account', async ({ page }) => {
+    await page.goto('/settings');
+
+    const sarahRow = page.getByTestId('practitioner-row').filter({ hasText: 'Dr. Sarah Miller' });
+    const markRow = page.getByTestId('practitioner-row').filter({ hasText: 'Dr. Mark Jones' });
+    await expect(sarahRow).toContainText('Logged In');
+    await expect(markRow).toContainText('Active');
+
+    await page.getByRole('button', { name: 'Log out' }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    await page.getByPlaceholder('e.g. sarah.miller').fill('mark.jones');
+    await page.getByPlaceholder('Enter your password').fill('demo1234');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await expect(page).toHaveURL(/\/manage$/);
+    await page.getByRole('link', { name: 'Inpatient Settings' }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+
+    const markLoggedInRow = page.getByTestId('practitioner-row').filter({ hasText: 'Dr. Mark Jones' });
+    const sarahActiveRow = page.getByTestId('practitioner-row').filter({ hasText: 'Dr. Sarah Miller' });
+    await expect(markLoggedInRow).toContainText('Logged In');
+    await expect(sarahActiveRow).toContainText('Active');
+    await expect(page.getByText('Logged In', { exact: true })).toHaveCount(1);
+  });
+
   test('opening a profile navigates to /patients/:id and Back returns to /manage', async ({ page }) => {
     await page.goto('/manage');
     await page

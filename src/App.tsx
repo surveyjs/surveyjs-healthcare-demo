@@ -10,7 +10,7 @@ import { SurveyCreatorModal } from './survey/SurveyCreatorModal';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { FormId } from './types/forms';
 import { Patient } from './types/patient';
-import { AuthUser } from './types/auth';
+import { AuthUser, RosterEntry } from './types/auth';
 import { patientRepository } from './repositories/patientRepository';
 import { authRepository } from './repositories/authRepository';
 import { formRepository, FORM_METADATA_LIST } from './repositories/formRepository';
@@ -131,10 +131,15 @@ export default function App() {
   const builderReturnRef = useRef<(() => void) | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [allPatients, setAllPatients] = useState<Patient[]>([]);
+  const [practitioners, setPractitioners] = useState<RosterEntry[]>([]);
 
   useEffect(() => {
     // Patients only see their own record; skip loading the full registry
     if (currentUser?.role !== 'doctor') return;
+    authRepository
+      .getRoster()
+      .then((roster) => setPractitioners(roster.filter((user) => user.role === 'doctor')))
+      .catch((e) => console.error('Failed to load user roster:', e));
     const load = () => {
       patientRepository
         .getAllPatients()
@@ -293,47 +298,36 @@ export default function App() {
                   </h2>
 
                   <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-teal-50/50 border border-teal-100">
-                      <div>
-                        <span className="font-bold text-gray-900">Dr. Sarah Miller</span>
-                        <div className="text-xs text-gray-500">General Practitioner (Current User)</div>
-                      </div>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-semibold">
-                        Logged In
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-gray-50 border border-gray-200">
-                      <div>
-                        <span className="font-medium text-gray-900">Dr. Smith</span>
-                        <div className="text-xs text-gray-500">Cardiology & Internal Medicine</div>
-                      </div>
-                      <span className="text-xs text-gray-500">Active</span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-gray-50 border border-gray-200">
-                      <div>
-                        <span className="font-medium text-gray-900">Dr. Jones</span>
-                        <div className="text-xs text-gray-500">Pediatrics & Family Medicine</div>
-                      </div>
-                      <span className="text-xs text-gray-500">Active</span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-gray-50 border border-gray-200">
-                      <div>
-                        <span className="font-medium text-gray-900">Dr. Williams</span>
-                        <div className="text-xs text-gray-500">Pulmonology & Respiratory</div>
-                      </div>
-                      <span className="text-xs text-gray-500">Active</span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-gray-50 border border-gray-200">
-                      <div>
-                        <span className="font-medium text-gray-900">Nurse James Lee</span>
-                        <div className="text-xs text-gray-500">Senior Practice Nurse</div>
-                      </div>
-                      <span className="text-xs text-gray-500">Active</span>
-                    </div>
+                    {practitioners.map((practitioner) => {
+                      const isCurrentUser = practitioner.username === currentUser.username;
+                      return (
+                        <div
+                          key={practitioner.username}
+                          data-testid="practitioner-row"
+                          className={`flex items-center justify-between p-2.5 rounded-md border ${
+                            isCurrentUser
+                              ? 'bg-teal-50/50 border-teal-100'
+                              : 'bg-gray-50 border-gray-200'
+                          }`}
+                        >
+                          <div>
+                            <span className={`text-gray-900 ${isCurrentUser ? 'font-bold' : 'font-medium'}`}>
+                              {practitioner.fullName}
+                            </span>
+                            <div className="text-xs text-gray-500">
+                              {isCurrentUser ? 'Doctor (Current User)' : 'Doctor'}
+                            </div>
+                          </div>
+                          {isCurrentUser ? (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-semibold">
+                              Logged In
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-500">Active</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
