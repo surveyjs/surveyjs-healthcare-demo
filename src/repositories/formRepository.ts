@@ -31,7 +31,7 @@ export const FORM_METADATA_LIST: FormMetadata[] = [
   {
     id: 'patient-search',
     title: 'Search for a Patient Form',
-    description: 'Search filter form for querying patients by surname, birth date, or NHS number.',
+    description: 'Search filter form for querying patients by name, birth date, or NHS number.',
     defaultSchema: patientSearchSchema,
   },
   {

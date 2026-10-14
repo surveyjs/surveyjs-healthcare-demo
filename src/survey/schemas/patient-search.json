@@ -1,15 +1,19 @@
 {
   "title": "Search for a Patient",
+  "description": "Results update as you type. Filter by name, date of birth, or NHS number.",
+  "textUpdateMode": "onTyping",
   "pages": [
     {
       "name": "search_for_patient",
-      "description": "Filter patients by last name, date of birth, or NHS number. All fields are optional.",
       "elements": [
         {
           "type": "text",
-          "name": "last_name",
-          "title": "Last Name",
-          "autocomplete": "family-name"
+          "name": "patient_name",
+          "title": "Patient name",
+          "placeholder": "First name, last name, or both",
+          "width": "33.333%",
+          "minWidth": "200px",
+          "autocomplete": "off"
         },
         {
           "type": "text",
@@ -17,23 +21,24 @@
           "startWithNewLine": false,
           "title": "Date of Birth",
           "inputType": "date",
-          "autocomplete": "bday"
+          "maxValueExpression": "today()",
+          "width": "33.333%",
+          "minWidth": "200px"
         },
         {
           "type": "text",
           "name": "nhs-number",
           "startWithNewLine": false,
           "title": "NHS Number",
-          "autocomplete": "bday",
-          "maskType": "pattern",
-          "maskSettings": {
-            "pattern": "999 999 9999"
-          }
+          "placeholder": "Full or partial number",
+          "width": "33.333%",
+          "minWidth": "200px",
+          "autocomplete": "off"
         }
       ]
     }
   ],
-  "checkErrorsMode": "onValueChanged",
+  "checkErrorsMode": "onComplete",
   "completeText": "Search",
-  "headerView": "advanced"
+  "headerView": "basic"
 }

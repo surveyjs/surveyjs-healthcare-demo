@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { bypassLoginAsDoctor } from './auth-helpers';
 
 test.beforeEach(async ({ page, request }) => {
@@ -6,48 +6,58 @@ test.beforeEach(async ({ page, request }) => {
   await bypassLoginAsDoctor(page);
 });
 
+/** Picks a choice in a SurveyJS dropdown (its input wrapper intercepts pointer events). */
+async function selectSurveyOption(page: Page, label: string, option: string) {
+  await page.getByRole('combobox', { name: label }).click({ force: true });
+  await page.getByRole('option', { name: option, exact: true }).click();
+}
+
 test('manage patients screen lists all patients from the SQLite database', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'David Miller' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Sophie Bennett' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open Profile: Emma Thompson' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open Profile: David Miller' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open Profile: Sophie Bennett' })).toBeVisible();
 
-  const emmaCard = page.getByRole('button', { name: 'Open Profile' }).filter({ hasText: 'Emma Thompson' });
+  // Status is not shown on list cards
+  const emmaCard = page.locator('.patient-card').filter({ hasText: 'Emma Thompson' });
   await expect(emmaCard.getByText('Active', { exact: true })).toHaveCount(0);
-  await emmaCard.focus();
+  await expect(emmaCard).toContainText('945 128 4567');
+  await expect(emmaCard).toContainText('12 Oakfield Road');
+
+  await page.getByRole('link', { name: 'Open Profile: Emma Thompson' }).focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/patients\/p-emma-thompson$/);
   await expect(
     page.getByRole('heading', { name: 'Emma Thompson', exact: true }).locator('..').getByText('Active', { exact: true }),
   ).toBeVisible();
-
-  // Seeded details rendered from DB rows
-  await expect(page.getByText('945 128 4567', { exact: true })).toBeVisible();
-  await expect(page.getByText('12 Oakfield Road', { exact: false })).toBeVisible();
 });
 
 test('patient profile shows visits and prescriptions loaded from the database', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/patients/p-emma-thompson');
 
-  const emmaCard = page
-    .locator('div')
-    .filter({ has: page.getByRole('heading', { name: 'Emma Thompson' }) })
-    .getByRole('button', { name: 'Open Profile' })
-    .first();
-  await emmaCard.click();
-
-  await expect(page.getByText('Emma Thompson').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Patient Profile' })).toBeVisible();
   // Seeded visit and prescription data
   await expect(page.getByText('Tension headache').first()).toBeVisible();
   await expect(page.getByText('Amlodipine 5mg Tablets').first()).toBeVisible();
   await expect(page.getByText('Ibuprofen 200mg Tablets').first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Survey view' }).click();
-  await expect(page.getByLabel('Visit Date')).toBeVisible();
-  await expect.poll(async () => page.getByRole('textbox', { name: 'Diagnosis' }).evaluateAll(
-    (inputs) => inputs.some((input) => (input as HTMLInputElement).value === 'Tension headache'),
-  )).toBe(true);
+  // Basic and contact details collapse together
+  const toggle = page.getByRole('button', { name: 'Contact Details' });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await toggle.click();
+  await expect(page.getByRole('button', { name: 'Basic Details' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByText('Penicillin (rash), Pollen (seasonal)')).toBeHidden();
+  await toggle.click();
+  await expect(page.getByText('Penicillin (rash), Pollen (seasonal)')).toBeVisible();
+
+  // Visit cards open the read-only SurveyJS dynamic-panel record
+  await page.getByRole('button', { name: /View visit details: GP Consultation, 18\/04\/2024/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Visit Details' });
+  await expect(dialog.getByLabel('Visit Date')).toBeVisible();
+  await expect(dialog.getByRole('textbox', { name: 'Diagnosis' })).toHaveValue('Tension headache');
+  await dialog.getByRole('button', { name: 'Close dialog' }).click();
+  await expect(dialog).toBeHidden();
 });
 
 test('medications registry iterates prescriptions of all patients from the database', async ({ page }) => {
@@ -64,20 +74,22 @@ test('medications registry filters, sorts, clears filters, and exposes row actio
   await page.goto('/medications');
 
   const table = page.getByRole('table');
-  await page.getByLabel('Filter by patient name').fill('Emma');
+  const filters = page.locator('#medication-filters');
+  await filters.getByRole('textbox', { name: 'Patient name' }).fill('Emma');
   await expect(table.getByRole('row')).toHaveCount(3);
   await expect(table.getByText('Amlodipine 5mg Tablets')).toBeVisible();
   await expect(table.getByText('Ibuprofen 200mg Tablets')).toBeVisible();
   await expect(table.getByText('Salbutamol 100mcg Inhaler')).toHaveCount(0);
 
-  await page.getByLabel('Filter by patient name').fill('');
-  await page.getByLabel('Filter by NHS number').fill('832 918 3491');
+  await filters.getByRole('textbox', { name: 'Patient name' }).fill('');
+  await filters.getByRole('textbox', { name: 'NHS number' }).fill('832 918 3491');
   await expect(table.getByRole('row')).toHaveCount(2);
   await page.getByRole('button', { name: 'Clear filters' }).click();
-  await page.getByLabel('Filter by medication').fill('salbutamol');
+  await expect(filters.getByRole('textbox', { name: 'NHS number' })).toHaveValue('');
+  await filters.getByRole('textbox', { name: 'Medication' }).fill('salbutamol');
   await expect(table.getByRole('row')).toHaveCount(2);
-  await page.getByLabel('Filter by medication').fill('');
-  await page.getByLabel('Filter by status').selectOption('Completed');
+  await filters.getByRole('textbox', { name: 'Medication' }).fill('');
+  await selectSurveyOption(page, 'Status', 'Completed');
   await expect(table.getByRole('row')).toHaveCount(2);
   await expect(table.getByText('Ibuprofen 200mg Tablets')).toBeVisible();
 
@@ -87,7 +99,7 @@ test('medications registry filters, sorts, clears filters, and exposes row actio
   await expect(table.getByRole('columnheader', { name: /Patient/ })).toHaveAttribute('aria-sort', 'descending');
 
   const emmaRow = table.locator('tbody tr').filter({ hasText: 'Amlodipine 5mg Tablets' });
-  await emmaRow.getByRole('link', { name: 'View Patient' }).click();
+  await emmaRow.getByRole('link', { name: 'Emma Thompson' }).click();
   await expect(page).toHaveURL(/\/patients\/p-emma-thompson$/);
   await page.goto('/medications');
   await page.getByRole('button', { name: 'View Medication Record' }).first().click();
@@ -95,6 +107,25 @@ test('medications registry filters, sorts, clears filters, and exposes row actio
   await expect(recordDialog).toBeVisible();
   await expect(recordDialog.getByRole('textbox', { name: 'Medication', exact: true })).toHaveValue('Amlodipine 5mg Tablets');
   await expect(recordDialog.getByText('Once daily', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Close medication record' }).click();
+  await recordDialog.getByRole('button', { name: 'Close dialog' }).click();
   await expect(recordDialog).toBeHidden();
+});
+
+test('the demo dock switches to the dark theme and toggles SurveyJS outlines', async ({ page }) => {
+  await page.goto('/manage');
+  const dock = page.getByRole('toolbar', { name: 'Demo display options' });
+  const html = page.locator('html');
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('.search-panel')).toHaveAttribute('data-survey-component', 'SurveyJS renders this');
+
+  await dock.getByRole('button', { name: 'Switch to dark theme' }).click();
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+
+  const outlines = dock.getByRole('button', { name: 'Highlight SurveyJS components' });
+  await expect(outlines).toHaveAttribute('aria-pressed', 'true');
+  await outlines.click();
+  await expect(outlines).toHaveAttribute('aria-pressed', 'false');
+  await expect(html).toHaveAttribute('data-survey-outlines', 'false');
 });

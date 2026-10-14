@@ -70,5 +70,6 @@
         }
       ]
     }
-  ]
+  ],
+  "headerView": "basic"
 }

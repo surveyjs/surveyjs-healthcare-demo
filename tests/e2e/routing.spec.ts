@@ -5,11 +5,13 @@ test.beforeEach(async ({ request }) => {
   await request.post('/api/admin/reset');
 });
 
+const emmaLink = (page: import('@playwright/test').Page) => page.getByRole('link', { name: 'Open Profile: Emma Thompson' });
+
 test.describe('auth guard', () => {
   test('unauthenticated users are redirected to /login from any URL', async ({ page }) => {
     await page.goto('/medications');
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole('heading', { name: 'Clinic Portal' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Clinic Portal Sign In' })).toBeVisible();
 
     await page.goto('/patients/p-emma-thompson');
     await expect(page).toHaveURL(/\/login$/);
@@ -22,9 +24,9 @@ test.describe('auth guard', () => {
     await page.getByRole('button', { name: 'Sign In' }).click();
 
     await expect(page).toHaveURL(/\/manage$/);
-    await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
+    await expect(emmaLink(page)).toBeVisible();
 
-    await page.getByRole('button', { name: 'Log out' }).click();
+    await page.getByRole('button', { name: 'Log Out' }).click();
     await expect(page).toHaveURL(/\/login$/);
   });
 });
@@ -37,13 +39,13 @@ test.describe('staff routes', () => {
   test('the root URL redirects a signed-in doctor to /manage', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/manage$/);
-    await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
+    await expect(emmaLink(page)).toBeVisible();
   });
 
   test('header navigation updates the URL for every view', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('link', { name: 'Healthcare home' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'HEALTHCARE' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Manage Patients' })).toHaveAttribute('aria-current', 'page');
 
@@ -51,6 +53,7 @@ test.describe('staff routes', () => {
     await expect(page).toHaveURL(/\/register$/);
     await expect(page.getByRole('link', { name: 'Register Patient' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { name: 'Register Patient' })).toBeVisible();
+    await expect(page).toHaveTitle('Healthcare · Register Patient');
 
     await page.getByRole('link', { name: 'Medication', exact: true }).click();
     await expect(page).toHaveURL(/\/medications$/);
@@ -74,7 +77,7 @@ test.describe('staff routes', () => {
     await expect(sarahRow).toContainText('Logged In');
     await expect(markRow).toContainText('Active');
 
-    await page.getByRole('button', { name: 'Log out' }).click();
+    await page.getByRole('button', { name: 'Log Out' }).click();
     await expect(page).toHaveURL(/\/login$/);
     await page.getByPlaceholder('e.g. sarah.miller').fill('mark.jones');
     await page.getByPlaceholder('Enter your password').fill('demo1234');
@@ -90,22 +93,23 @@ test.describe('staff routes', () => {
     await expect(page.getByText('Logged In', { exact: true })).toHaveCount(1);
   });
 
-  test('opening a profile navigates to /patients/:id and Back returns to /manage', async ({ page }) => {
+  test('the patient name opens /patients/:id and the breadcrumb returns to /manage', async ({ page }) => {
     await page.goto('/manage');
-    await page
-      .locator('div')
-      .filter({ has: page.getByRole('heading', { name: 'Emma Thompson' }) })
-      .getByRole('button', { name: 'Open Profile' })
-      .first()
-      .click();
+    await emmaLink(page).click();
 
     await expect(page).toHaveURL(/\/patients\/p-emma-thompson$/);
-    await expect(page.getByText('Emma Thompson').first()).toBeVisible();
+    const primaryNav = page.getByRole('navigation', { name: 'Primary navigation' });
+    await expect(primaryNav.getByRole('link', { name: 'Manage Patients' })).toHaveAttribute('aria-current', 'page');
+    const breadcrumbs = page.getByRole('navigation', { name: 'Breadcrumb' });
+    await expect(breadcrumbs.getByText('Emma Thompson')).toHaveAttribute('aria-current', 'page');
+
+    await breadcrumbs.getByRole('link', { name: 'Manage Patients' }).click();
+    await expect(page).toHaveURL(/\/manage$/);
   });
 
   test('deep links open the right view directly', async ({ page }) => {
     await page.goto('/patients/p-david-miller');
-    await expect(page.getByText('David Miller').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'David Miller' })).toBeVisible();
     await expect(page.getByText('Tension headache')).toHaveCount(0);
 
     await page.goto('/medications');
@@ -114,14 +118,14 @@ test.describe('staff routes', () => {
 
   test('browser back and forward move between views', async ({ page }) => {
     await page.goto('/manage');
-    await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
+    await expect(emmaLink(page)).toBeVisible();
 
     await page.getByRole('link', { name: 'Medication', exact: true }).click();
     await expect(page).toHaveURL(/\/medications$/);
 
     await page.goBack();
     await expect(page).toHaveURL(/\/manage$/);
-    await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
+    await expect(emmaLink(page)).toBeVisible();
 
     await page.goForward();
     await expect(page).toHaveURL(/\/medications$/);
@@ -131,14 +135,14 @@ test.describe('staff routes', () => {
   test('unknown URLs redirect to /manage', async ({ page }) => {
     await page.goto('/does-not-exist');
     await expect(page).toHaveURL(/\/manage$/);
-    await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
+    await expect(emmaLink(page)).toBeVisible();
   });
 
   test('an unknown patient id shows the not-found state with a back link', async ({ page }) => {
     await page.goto('/patients/p-nobody');
-    await expect(page.getByText('Patient record not found.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Back to Manage Patients' }).click();
+    await page.getByRole('link', { name: 'Back to Manage Patients' }).click();
     await expect(page).toHaveURL(/\/manage$/);
   });
 });
@@ -148,71 +152,63 @@ test.describe('patient portal routes', () => {
     await bypassLoginAsPatient(page);
   });
 
-  test('a patient is redirected to /my-profile from staff URLs', async ({ page }) => {
+  test('a patient is redirected to /portal from staff URLs', async ({ page }) => {
     await page.goto('/manage');
-    await expect(page).toHaveURL(/\/my-profile$/);
-    await expect(page.getByText('Emma Thompson').first()).toBeVisible();
+    await expect(page).toHaveURL(/\/portal$/);
+    await expect(page.getByRole('heading', { name: 'Patient Portal' })).toBeVisible();
+    await expect(page.getByText('Welcome, Emma Thompson.')).toBeVisible();
     // Staff navigation is not offered to patients
     await expect(page.getByRole('link', { name: 'Manage Patients' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Healthcare home' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Patient Portal' })).toHaveAttribute('aria-current', 'page');
   });
 
-  test('/my-profile deep link opens the patient own record', async ({ page }) => {
-    await page.goto('/my-profile');
-    await expect(page).toHaveURL(/\/my-profile$/);
-    await expect(page.getByRole('link', { name: 'My Profile' })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByText('Emma Thompson').first()).toBeVisible();
-    await expect(page.getByRole('link', { name: 'My Profile' })).toBeVisible();
-  });
+  test('the portal shows the patient own record without staff controls', async ({ page }) => {
+    await page.goto('/portal');
+    await expect(page.getByRole('heading', { name: 'Emma Thompson', exact: true })).toBeVisible();
+    await expect(page.getByText('Tension headache')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Edit Patient' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Record Visit/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Edit Prescription/ })).toHaveCount(0);
 
-  test('appointment request modal manages keyboard focus', async ({ page }) => {
-    await page.goto('/my-profile');
-    const trigger = page.getByRole('button', { name: 'Request an Appointment' });
-    await trigger.click();
-
-    const dialog = page.getByRole('dialog', { name: 'Request an Appointment' });
-    const closeButton = dialog.getByRole('button', { name: 'Close appointment request' });
-    const cancelButton = dialog.getByRole('button', { name: 'Cancel' });
-    await expect(closeButton).toBeFocused();
-
-    await page.keyboard.press('Shift+Tab');
-    await expect(cancelButton).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(closeButton).toBeFocused();
-
+    // Medication cards open the read-only SurveyJS record
+    await page.getByRole('button', { name: 'View medication: Amlodipine 5mg Tablets' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Medication Record' });
+    await expect(dialog.getByRole('textbox', { name: 'Medication', exact: true })).toHaveValue('Amlodipine 5mg Tablets');
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
-    await expect(trigger).toBeFocused();
+    await expect(page.getByRole('button', { name: 'View medication: Amlodipine 5mg Tablets' })).toBeFocused();
   });
 
-  test('patient portal hides staff controls and sends appointment requests to staff', async ({ page }) => {
-    await page.goto('/my-profile');
-    const patientHeading = page.getByRole('heading', { name: 'Emma Thompson', exact: true });
-    await expect(patientHeading.locator('..').getByText('Active', { exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Edit Patient' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Add New Visit' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /Record Visit/ })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Revoke' })).toHaveCount(0);
+  test('appointment requests are sent from their own page and reach staff', async ({ page }) => {
+    await page.goto('/portal');
+    await page.getByRole('link', { name: 'Request an Appointment' }).click();
+    await expect(page).toHaveURL(/\/appointments\/new$/);
+    await expect(page.getByRole('link', { name: 'Request Appointment' })).toHaveAttribute('aria-current', 'page');
 
-    await page.getByRole('button', { name: 'Request an Appointment' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Request an Appointment' });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByLabel('Patient Name')).toHaveValue('Emma Thompson');
-    await dialog.getByLabel('Preferred Appointment Date').fill('2026-10-12');
-    await dialog.getByLabel('Reason for Appointment').fill('Annual review');
-    await dialog.getByRole('button', { name: 'Submit Request' }).click();
+    await expect(page.getByLabel('Patient Name')).toHaveValue('Emma Thompson');
+    await page.getByLabel('Preferred Appointment Date').fill('2026-10-12');
+    await page.getByLabel('Reason for Appointment').fill('Annual review');
+    await page.getByRole('button', { name: 'Submit Request' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Appointment request sent' })).toBeVisible();
-    await expect(dialog).toBeHidden();
-    await page.getByRole('button', { name: 'Log out' }).click();
+    await expect(page).toHaveURL(/\/portal$/);
+    await expect(page.getByRole('status').filter({ hasText: 'Appointment request sent.' })).toBeVisible();
+    await expect(page.locator('.appointment-request')).toContainText('Annual review');
 
+    await page.getByRole('button', { name: 'Log Out' }).click();
     await page.getByPlaceholder('e.g. sarah.miller').fill('sarah.miller');
     await page.getByPlaceholder('Enter your password').fill('demo1234');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page).toHaveURL(/\/manage$/);
     await page.getByRole('link', { name: 'Inpatient Settings' }).click();
-    await expect(page.getByRole('heading', { name: 'Appointment Requests' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
-    await expect(page.getByText('Annual review')).toBeVisible();
+    const requests = page.locator('.appointments');
+    await expect(requests.getByRole('heading', { name: 'Appointment Requests' })).toBeVisible();
+    await expect(requests.getByRole('heading', { name: 'Emma Thompson' })).toBeVisible();
+    await expect(requests.getByText('Annual review')).toBeVisible();
+  });
+
+  test('cancelling an appointment request returns to the portal', async ({ page }) => {
+    await page.goto('/appointments/new');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page).toHaveURL(/\/portal$/);
   });
 });

@@ -3,7 +3,6 @@
   "pages": [
     {
       "name": "sign_in",
-      "description": "Sign in with your clinic credentials, or pick a pre-registered account from the demo roster.",
       "elements": [
         {
           "type": "dropdown",
@@ -59,5 +58,6 @@
       "setValue": "demo1234"
     }
   ],
-  "completeText": "Sign In"
+  "completeText": "Sign In",
+  "headerView": "basic"
 }

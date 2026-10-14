@@ -9,22 +9,23 @@ The application implements a realistic clinical workflow, split by user role:
 
 ### Authentication & roles
 
-- **Login** — the login screen uses the shared Healthcare wordmark and a SurveyJS form ([login.json](src/survey/schemas/login.json)). A "quick sign-in" dropdown is populated live from the API via `choicesByUrl`, and SurveyJS triggers (`copyvalue` / `setvalue`) prefill the credentials. Failed logins keep the form active by cancelling `onCompleting`.
+- **Login** — the login screen uses the shared Healthcare header and a SurveyJS form ([login.json](src/survey/schemas/login.json)). A "quick sign-in" dropdown is populated live from the API via `choicesByUrl`, and SurveyJS triggers (`copyvalue` / `setvalue`) prefill the credentials. Failed logins keep the form active by cancelling `onCompleting` and attach the error to the password question.
 - **Role-based UI** — doctors get the full patient-management experience; patient accounts get a restricted portal showing only their own profile and read-only history, with staff management controls hidden.
 
 ### Doctor / staff use cases
 
 - **Patient registration** — multi-section SurveyJS form capturing demographics, address, and emergency contact
-- **Patient search & management** — filter patients by surname, birth date, or NHS number using a SurveyJS-driven search form. All filters are optional; an empty search lists every patient. Patient cards are keyboard-accessible profile actions; status remains available on the profile and medication views, but is not shown on list cards. Several seeded patients share the surname "Thompson", so searching for it demonstrates multi-result matching
-- **Patient profile** — basic details, contact details, visit history, and prescribed medications. Visit history can be switched to a read-only SurveyJS dynamic-panel view, and today's visits remain editable by doctors.
-- **Practice medication overview** — browse all active and past prescriptions, filter by patient name, NHS number, medication, or status, sort the table columns, navigate to the patient's profile, and open an individual read-only SurveyJS medication record
-- **Edit patient / Add visit / Add or edit prescription** — modal workflows powered by the corresponding SurveyJS forms, with validation and immediate profile updates. Doctors can edit visits recorded today and active prescriptions; older visits and completed prescriptions are read-only, enforced by the API. Prescription forms can export their current values as a PDF download. Modal forms render single-column with compact spacing, all date fields use native date pickers (the visit date defaults to today and stays editable), and validation errors appear below the inputs. Saving closes the modal directly — the SurveyJS completion page is suppressed. The visit form's practitioner defaults to the signed-in doctor (via the dropdown's "Other" option when they are not among the schema's choices)
+- **Patient search & management** — results update as you type in the SurveyJS search form: patient name (first name, last name, or both), date of birth, or a full or partial NHS number. All filters are optional; an empty search lists every patient. The patient name links to the profile, and each result offers **Record Visit** plus a menu with **Add Prescription** and **Edit Patient**, which open the SurveyJS dialogs in place. Several seeded patients share the surname "Thompson", so searching for it demonstrates multi-result matching
+- **Patient profile** — breadcrumb, identity summary, collapsible basic and contact details, visit history, and prescribed medications. Visit cards open a read-only SurveyJS dynamic-panel record; visits recorded today and active prescriptions show edit actions.
+- **Practice medication overview** — browse all active and past prescriptions, filter by patient name, NHS number, medication, or status (a SurveyJS filter form), sort the table columns, navigate to the patient's profile, and open an individual read-only SurveyJS medication record
+- **Edit patient / Record visit / Add or edit prescription** — native `<dialog>` workflows powered by the corresponding SurveyJS forms, with validation and immediate updates. Each dialog's SurveyJS footer holds Save, Cancel, and an **Edit … Form** action that opens the builder. Doctors can edit visits recorded today and active prescriptions; older visits and completed prescriptions are read-only, enforced by the API. Prescription forms can export their current values as a PDF download (**Preview and Print**). Dialog forms render single-column, all date fields use native date pickers (the visit date defaults to today and stays editable), and validation errors appear below the inputs. Saving closes the dialog directly — the SurveyJS completion page is suppressed. The visit form's practitioner defaults to the signed-in doctor (via the dropdown's "Other" option when they are not among the schema's choices)
 - **Form builder** — open any application form in the embedded Survey Creator, modify it (add/remove/reorder questions, edit choices, validation, visibility logic), save the JSON, and see the updated form rendered in the app immediately
+- **Demo display options** — a floating dock switches between the light and dark clinic themes (shared by the app chrome, the forms, and Creator) and toggles outlines that mark every SurveyJS-rendered component
 
 ### Patient portal use cases
 
-- **My profile** — a patient signs in and sees only their own record and read-only visit/medication history
-- **Request an appointment** — submit a keyboard-accessible SurveyJS modal prefilled with the patient's contact details; focus is managed while it is open and restored when it closes, including with Escape; a confirmation toast appears after it is stored
+- **Patient portal** — a patient signs in and sees only their own contact details, appointment requests, visits, and prescribed medication; medication cards open the read-only SurveyJS record
+- **Request an appointment** — a dedicated page with a SurveyJS form prefilled with the patient's contact details; submitting returns to the portal with a confirmation toast
 - **Staff review** — submitted requests appear in Inpatient Settings, where the practitioner list is loaded from the account roster and marks the signed-in doctor
 
 ## Navigation & URLs
@@ -39,11 +40,12 @@ Every view has its own URL (client-side routing via `react-router-dom`), so brow
 | `/patients/:id` | Patient profile | staff |
 | `/medications` | Practice Medication Overview | staff |
 | `/settings` | Inpatient & Clinical Settings | staff |
-| `/my-profile` | Patient portal (own record) | patient |
+| `/portal` | Patient portal (own record) | patient |
+| `/appointments/new` | Request an appointment | patient |
 
-Unauthenticated visitors are redirected to `/login`; unknown URLs redirect to the role's home view (`/manage` for staff, `/my-profile` for patients). Patients hitting staff URLs are redirected to `/my-profile`.
+Unauthenticated visitors are redirected to `/login`; unknown URLs redirect to the role's home view (`/manage` for staff, `/portal` for patients). Patients hitting staff URLs are redirected to `/portal`. An unknown patient id shows a "Page not found" view.
 
-The shared header follows the approved healthcare navigation design: brand wordmark, role-appropriate route links with an active-page indicator, the signed-in user's name, and sign-out. On narrow screens, navigation remains horizontally scrollable while identity and sign-out stay available.
+The shared header shows the HEALTHCARE brand, role-appropriate route links with an active-page indicator, the signed-in user's name, and sign-out. Nested views (patient profile, appointment request) add breadcrumbs. On narrow screens, navigation wraps to its own row and stays horizontally scrollable.
 
 ## Technology Stack
 
@@ -56,9 +58,9 @@ The shared header follows the approved healthcare navigation design: brand wordm
 | Form builder | `survey-creator-core`, `survey-creator-react` |
 | PDF export | `survey-pdf` (SurveyJS PDF Generator; commercial license required for commercial use) |
 | Backend | Express + `better-sqlite3` (SQLite) |
-| Styling | Tailwind CSS v4 (+ a custom SurveyJS ↔ Tailwind theme adapter) |
+| Styling | Tailwind CSS v4 utilities, design tokens in [styles.css](src/styles.css), and a Tailwind → SurveyJS adapter ([tailwind-adapter.css](src/survey/tailwind-adapter.css)) |
 | Testing | Vitest (unit, incl. a SurveyJS schema lint gate) + Playwright (e2e) |
-| Icons | Lucide |
+| Icons | Feather (inline SVG subset in [featherIcons.ts](src/ui/featherIcons.ts)) |
 
 No custom form engine is used — all forms load and render the actual SurveyJS JSON schemas.
 
@@ -67,13 +69,13 @@ No custom form engine is used — all forms load and render the actual SurveyJS 
 The integration follows the standard SurveyJS React setup, wrapped in two reusable components:
 
 1. **Packages** — `survey-core` + `survey-react-ui` for rendering, `survey-creator-core` + `survey-creator-react` for the builder, and `survey-pdf` for PDF export (all v3.x).
-2. **[SurveyRenderer.tsx](src/survey/SurveyRenderer.tsx)** — a single reusable renderer used by every page and modal. It:
-   - creates a SurveyJS `Model` from a JSON schema (memoized per schema),
-   - applies the `DefaultLightPanelless` theme and imports `survey-core/survey-core.min.css` plus the local Tailwind adapter,
-   - places validation errors below the inputs (`questionErrorLocation: "bottom"`) for every rendered form,
-   - applies `initialData` for edit workflows and supports `readOnly` (display mode),
-   - exposes `onComplete` / `onValueChanged` callbacks that hand `survey.data` back to the host, and `onModelReady` for advanced cases (e.g. the login page cancelling `onCompleting`).
-3. **[SurveyCreatorModal.tsx](src/survey/SurveyCreatorModal.tsx)** — embeds the Survey Creator in a modal. It loads the same JSON the Form Library renders; saving persists the edited schema through `formRepository`, closing the round-trip. **Save & Apply Form** persists the schema, closes the creator, and returns to the view the builder was opened from (if it was opened from inside a modal form, that modal reopens with the updated schema):
+2. **[SurveyRenderer.tsx](src/survey/SurveyRenderer.tsx)** — a single reusable renderer used by every page and dialog. It:
+   - creates a SurveyJS `Model` from a JSON schema (memoized per schema) inside a `.native-survey` host element,
+   - applies the shared clinic theme and re-applies it when the display mode or viewport changes,
+   - places validation errors below the inputs (`questionErrorLocation: "bottom"`) and suppresses the completion page,
+   - applies initial `data` for edit workflows and supports `readOnly` (display mode),
+   - hands validated answers to `onSave` from `onCompleting` (the form stays live), reports `onValueChanged`, and adds host actions (Cancel, Reset, Edit … Form) as SurveyJS footer navigation items.
+3. **[SurveyCreatorModal.tsx](src/survey/SurveyCreatorModal.tsx)** — embeds the Survey Creator in a full-viewport dialog themed with the clinic palette. It loads the same JSON the Form Library renders; **Reset to Default** loads the bundled schema, and **Save & Apply Form** persists the schema through `formRepository`, closes the creator, and returns to the view the builder was opened from (if it was opened from inside a form dialog, that dialog reopens with the updated schema):
 
 ```text
 SurveyJS JSON → Survey Creator → edited JSON → Form Library → application form
@@ -85,24 +87,26 @@ SurveyJS JSON → Survey Creator → edited JSON → Form Library → applicatio
 | --- | --- |
 | [patient-registration.json](src/survey/schemas/patient-registration.json) | Register Patient page |
 | [patient-search.json](src/survey/schemas/patient-search.json) | Manage Patients search filters |
-| [edit-patient.json](src/survey/schemas/edit-patient.json) | Edit Patient modal |
-| [add-new-visit.json](src/survey/schemas/add-new-visit.json) | Add Visit modal |
-| [add-new-prescription.json](src/survey/schemas/add-new-prescription.json) | Add Prescription modal |
-| [patient-visits.json](src/survey/schemas/patient-visits.json) | Read-only SurveyJS visit history view on the patient profile |
-| [prescribed-medication.json](src/survey/schemas/prescribed-medication.json) | Read-only SurveyJS medication record dialog from the medications overview |
-| [appointment-request.json](src/survey/schemas/appointment-request.json) | Patient portal appointment request modal |
+| [edit-patient.json](src/survey/schemas/edit-patient.json) | Edit Patient dialog |
+| [add-new-visit.json](src/survey/schemas/add-new-visit.json) | Record / Edit Visit dialog |
+| [add-new-prescription.json](src/survey/schemas/add-new-prescription.json) | Add / Edit Prescription dialog |
+| [patient-visits.json](src/survey/schemas/patient-visits.json) | Read-only Visit Details dialog on the patient profile |
+| [prescribed-medication.json](src/survey/schemas/prescribed-medication.json) | Read-only Medication Record dialog (medications overview, patient portal) |
+| [appointment-request.json](src/survey/schemas/appointment-request.json) | Patient portal Request an Appointment page |
 | [login.json](src/survey/schemas/login.json) | Login page |
 
 5. **Survey ↔ domain mapping** — [surveyMapping.ts](src/repositories/surveyMapping.ts) contains the pure functions that translate between `survey.data` and the application's domain types, including collection mappings for the visit and prescription dynamic panels (note: SurveyJS static panels are layout-only, so child question values arrive as flat keys, and masked inputs like the NHS number store the unmasked value).
 
 ## How SurveyJS Was Themed to Match the Host Application
 
-The surveys are styled to be indistinguishable from the surrounding Tailwind UI:
+One set of Tailwind tokens drives both the SurveyJS forms and the surrounding clinic UI:
 
-- **Base theme** — `SurveyRenderer` and `SurveyCreatorModal` apply the built-in `DefaultLightPanelless` theme, which removes SurveyJS's panel chrome so forms sit flat on the host page.
-- **[tailwind-adapter.css](src/survey/tailwind-adapter.css)** — a generic SurveyJS ↔ Tailwind v4 theme adapter. Inside a `.sjs-theme-overrides` scope it remaps SurveyJS design tokens to the host's semantic CSS variables with a three-level fallback chain: shadcn-style semantic variables (`--color-primary`, `--color-primary-hover`, `--color-input`, `--color-border`, `--color-ring`, …) → Tailwind default variables → literal fallbacks. Spacing and density are expressed via `calc(var(--spacing) * N)` so the survey follows the host's spacing scale.
-- **Host design tokens** — the application defines its brand values in [src/index.css](src/index.css) under `@theme static` (`--font-sans`, `--color-primary: #00695c`, `--color-primary-hover: #004d40`). The adapter picks these up automatically, so changing the brand color restyles every form.
-- **Chrome handled by the host** — survey titles are hidden (`model.showTitle = false`); page and modal headers are rendered by regular React components so typography stays consistent.
+- **Design tokens** — [styles.css](src/styles.css) declares the clinic palette, font, and radius in Tailwind's `@theme` (`--color-primary`, `--color-card`, `--color-foreground`, …) and redefines the colors under `[data-theme="dark"]`. The app UI is built from Tailwind utilities (`bg-card`, `text-primary`, …); shared class bundles and primitives live in [components.tsx](src/ui/components.tsx).
+- **Tailwind → SurveyJS adapter** — [tailwind-adapter.css](src/survey/tailwind-adapter.css) maps those semantic tokens onto SurveyJS's `--sjs2-*` variables, so forms follow the palette (and dark mode) with no colors in JS. A retuning block in [styles.css](src/styles.css) keeps the clinic's form density (44px controls, roomy nested panels) on top of the adapter's compact Tailwind defaults.
+- **Base and per-form themes** — [clinicTheme.ts](src/theme/clinicTheme.ts) applies `DefaultLightPanelless` / `DefaultDarkPanelless` for the remaining semantic slots (minus any variable a stylesheet already sets, so the adapter always wins) plus host-specific layout (tighter insets on narrow screens, flush filter forms, dynamic-panel spacing).
+- **Creator** — `applyClinicCreatorTheme()` points the Survey Creator's panes at the same tokens and keeps its native density.
+- **Basic headers** — schemas use `"headerView": "basic"`, so form titles and descriptions render inside the card; [styles.css](src/styles.css) contains the small layout bridges SurveyJS needs (header divider, search header actions, dynamic-panel header spacing).
+- **Dark mode and outlines** — [demoTools.ts](src/theme/demoTools.ts) renders the display dock (a manual popover, moved into open dialogs so it stays above the top layer). It switches `data-theme` and re-themes every mounted form and Creator; the outline toggle marks each `[data-survey-component]` mount point.
 
 The result: SurveyJS forms inherit the app's colors, fonts, borders, focus rings, and spacing without forking any SurveyJS CSS.
 
@@ -134,15 +138,18 @@ server/
   index.ts            Server entry point (port 4001)
 src/
   components/
-    common/           Toast notifications
-    layout/           Header, Sidebar
-    modals/           Edit Patient, Add Visit, Add Prescription, Appointment Request
-    patients/         Patient cards, details, history
+    common/           Native dialog shell, toast
+    layout/           AppShell (header, navigation, page frame)
+    modals/           Patient form dialogs (edit patient, visit, prescription, read-only records)
+    patients/         Patient card, detail lists, visit/medication/appointment records
   pages/
     LoginPage
     RegisterPatientPage
     ManagePatientsPage
     PatientProfilePage
+    MedicationsPage
+    SettingsPage
+    PatientPortalPage   portal + appointment request page
   repositories/
     patientRepository   async API client for patient data
     appointmentRepository appointment request API client
@@ -153,7 +160,12 @@ src/
     schemas/            SurveyJS JSON definitions
     SurveyRenderer      Reusable renderer (Model creation, initial data, validation, completion)
     SurveyCreatorModal  Embedded Survey Creator
-    tailwind-adapter.css  Generic SurveyJS ↔ Tailwind v4 theme adapter
+    tailwind-adapter.css Tailwind tokens → SurveyJS --sjs2-* variables
+  theme/
+    clinicTheme         SurveyJS base, per-form layout and Creator themes (light/dark)
+    demoTools           Display dock (theme switch, SurveyJS outlines)
+  ui/                 Feather icons, shared page components, formatting helpers
+  styles.css          Tailwind entry: design tokens and SurveyJS bridges
   data/
     initialData         Seed demo patients and users
   types/                Patient, form, and auth type definitions

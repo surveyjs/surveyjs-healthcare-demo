@@ -3,7 +3,9 @@ import {createRoot} from 'react-dom/client';
 import {BrowserRouter} from 'react-router-dom';
 import App from './App.tsx';
 import {formRepository} from './repositories/formRepository';
-import './index.css';
+import './theme/clinicTheme';
+import './theme/demoTools';
+import './styles.css';
 
 const root = createRoot(document.getElementById('root')!);
 
