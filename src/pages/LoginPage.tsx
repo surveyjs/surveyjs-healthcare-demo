@@ -3,7 +3,7 @@ import { SurveyError } from 'survey-core';
 import { SurveyRenderer } from '../survey/SurveyRenderer';
 import { authRepository } from '../repositories/authRepository';
 import { AuthUser } from '../types/auth';
-import { PageHeading, useDocumentTitle, useFormSchema } from '../ui/components';
+import { PageHeading, panelClass, useDocumentTitle, useFormSchema } from '../ui/components';
 
 interface LoginPageProps {
   onLogin: (user: AuthUser) => void;
@@ -31,7 +31,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         description="Select a demo account to explore the local clinic portal."
         icon="log-in"
       />
-      <section className="panel">
+      <section className={panelClass}>
         <SurveyRenderer
           id="login-form"
           schema={schema}

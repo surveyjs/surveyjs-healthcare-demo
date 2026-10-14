@@ -46,7 +46,7 @@ const FormDialog: React.FC<FormDialogProps> = ({
 }) => {
   const schema = useFormSchema(formId);
   return (
-    <Modal className="form-dialog" heading={heading} description={description} onClose={onClose}>
+    <Modal form heading={heading} description={description} onClose={onClose}>
       <SurveyRenderer
         id="modal-form"
         schema={schema}

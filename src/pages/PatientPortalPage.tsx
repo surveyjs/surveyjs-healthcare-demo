@@ -8,7 +8,18 @@ import { SurveyRenderer } from '../survey/SurveyRenderer';
 import { AppointmentRequest } from '../types/appointmentRequest';
 import { Patient } from '../types/patient';
 import { Icon } from '../ui/Icon';
-import { Breadcrumbs, PageHeading, useDocumentTitle, useFormSchema } from '../ui/components';
+import {
+  Breadcrumbs,
+  buttonClass,
+  cx,
+  emptyPanelClass,
+  PageHeading,
+  panelBodyClass,
+  panelClass,
+  PanelHeading,
+  useDocumentTitle,
+  useFormSchema,
+} from '../ui/components';
 import { formatDate, fullName, patientAddress } from '../ui/format';
 
 /** Loads the signed-in patient's own record; null when it does not exist. */
@@ -28,7 +39,7 @@ function useOwnPatient(patientId?: string): Patient | null | undefined {
 }
 
 const NoLinkedRecord = () => (
-  <section className="panel empty">
+  <section className={emptyPanelClass}>
     <p>No patient record is linked to your account. Please contact the practice.</p>
   </section>
 );
@@ -60,24 +71,27 @@ export const PatientPortalPage: React.FC<{ patientId?: string }> = ({ patientId 
   return (
     <>
       <PageHeading title="Patient Portal" description={`Welcome, ${name}.`} icon="user" />
-      <section className="panel portal-summary">
+      <section
+        className={cx(
+          panelClass,
+          'mb-6 flex flex-col items-start gap-6 p-5 md:flex-row md:items-center md:justify-between md:p-6',
+        )}
+      >
         <div>
-          <h2>{name}</h2>
-          <p className="muted">
+          <h2 className="text-lg leading-normal font-semibold tracking-tight">{name}</h2>
+          <p className="mt-1.5 text-[13px] text-muted-foreground">
             NHS: {patient.nhsNumber} · Date of birth: {formatDate(patient.dateOfBirth)}
           </p>
         </div>
-        <Link to="/appointments/new" className="button primary">
+        <Link to="/appointments/new" className={buttonClass('primary', 'md', 'max-md:w-full')}>
           <Icon name="calendar" />
           Request an Appointment
         </Link>
       </section>
-      <div className="profile-grid portal-grid">
-        <section className="panel">
-          <div className="panel-heading">
-            <h2>Contact Details</h2>
-          </div>
-          <div className="panel-body">
+      <div className="grid gap-5 md:grid-cols-2 md:gap-6">
+        <section className={panelClass}>
+          <PanelHeading title="Contact Details" />
+          <div className={panelBodyClass}>
             <DetailsList
               items={[
                 ['Phone', patient.phoneNumber],
@@ -87,24 +101,18 @@ export const PatientPortalPage: React.FC<{ patientId?: string }> = ({ patientId 
             />
           </div>
         </section>
-        <section className="panel">
-          <div className="panel-heading">
-            <h2>Appointment Requests</h2>
-          </div>
-          <div className="panel-body">
+        <section className={panelClass}>
+          <PanelHeading title="Appointment Requests" />
+          <div className={cx(panelBodyClass, 'text-[13px] text-muted-foreground')}>
             <AppointmentList requests={requests} />
           </div>
         </section>
-        <section className="panel">
-          <div className="panel-heading">
-            <h2>Visits</h2>
-          </div>
+        <section className={panelClass}>
+          <PanelHeading title="Visits" />
           <VisitList visits={patient.visits || []} />
         </section>
-        <section className="panel">
-          <div className="panel-heading">
-            <h2>Prescribed Medication</h2>
-          </div>
+        <section className={panelClass}>
+          <PanelHeading title="Prescribed Medication" />
           <MedicationList
             prescriptions={patient.prescriptions || []}
             onView={(prescription) => setDialog({ kind: 'view-medication', prescription })}
@@ -135,7 +143,7 @@ export const AppointmentRequestPage: React.FC<{ patientId?: string; showToast: (
       {patient === null ? (
         <NoLinkedRecord />
       ) : (
-        <section className="panel">
+        <section className={panelClass}>
           <SurveyRenderer
             id="appointment-form"
             schema={schema}

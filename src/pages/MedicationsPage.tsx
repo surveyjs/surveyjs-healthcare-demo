@@ -5,7 +5,7 @@ import { OpenFormBuilder, PatientDialog, PatientDialogs } from '../components/mo
 import { SurveyRenderer } from '../survey/SurveyRenderer';
 import { Patient } from '../types/patient';
 import { Icon } from '../ui/Icon';
-import { Button, PageHeading, useDocumentTitle } from '../ui/components';
+import { Button, cx, PageHeading, panelClass, Pill, useDocumentTitle } from '../ui/components';
 import { formatDate } from '../ui/format';
 import {
   filterMedicationRows,
@@ -38,7 +38,14 @@ const COLUMNS: [MedicationSortKey, string][] = [
   ['status', 'Status'],
 ];
 
-const filtersFromSurvey = (data: Record<string, any>): MedicationFilters => ({
+// Cell styling lives on the table so every header and data cell stays uniform.
+const TABLE_CLASS = cx(
+  'w-full border-collapse text-left text-xs max-md:min-w-235',
+  '[&_th]:border-b [&_th]:border-border [&_th]:bg-card-subtle [&_th]:px-3.5 [&_th]:py-4.25 [&_th]:font-semibold [&_th]:whitespace-nowrap [&_th]:text-muted-foreground xl:[&_th]:px-4.5',
+  '[&_td]:border-b [&_td]:border-border-subtle [&_td]:px-3.5 [&_td]:py-4.5 [&_td]:align-middle xl:[&_td]:px-4.5 [&_tr:last-child>td]:border-b-0',
+);
+
+const filtersFromSurvey =(data: Record<string, any>): MedicationFilters => ({
   patientName: data.patient ?? '',
   nhsNumber: data.nhs ?? '',
   medication: data.medication ?? '',
@@ -64,17 +71,22 @@ export function MedicationsPage({
 
   return (
     <>
-      <div className="page-heading-row">
-        <PageHeading
-          title="Practice Medication Overview"
-          description="View active and past medication records across all registered patients."
-          icon="clipboard"
-        />
-        <Button icon="settings" onClick={() => onOpenFormBuilder('add-new-prescription')}>
-          Edit Medication Prescription Form
-        </Button>
-      </div>
-      <section className="panel medication-filters">
+      <PageHeading
+        title="Practice Medication Overview"
+        description="View active and past medication records across all registered patients."
+        icon="clipboard"
+        action={
+          <Button
+            icon="settings"
+            size="sm"
+            className="self-start max-md:w-full max-md:whitespace-normal md:ml-16.5 xl:mt-1 xl:ml-0"
+            onClick={() => onOpenFormBuilder('add-new-prescription')}
+          >
+            Edit Medication Prescription Form
+          </Button>
+        }
+      />
+      <section className={cx(panelClass, 'mb-6')}>
         <SurveyRenderer
           id="medication-filters"
           schema={FILTER_SCHEMA}
@@ -90,9 +102,9 @@ export function MedicationsPage({
           }}
         />
       </section>
-      <section className="panel table-panel">
-        <div className="table-scroll">
-          <table className="medication-table">
+      <section className={panelClass}>
+        <div className="overflow-x-auto">
+          <table className={TABLE_CLASS}>
             <thead>
               <tr>
                 {COLUMNS.map(([key, label]) => {
@@ -101,11 +113,16 @@ export function MedicationsPage({
                     <th key={key} scope="col" aria-sort={active ? (sort.asc ? 'ascending' : 'descending') : 'none'}>
                       <button
                         type="button"
+                        className="flex items-center gap-2"
                         aria-label={`Sort by ${label}`}
                         onClick={() => setSort({ key, asc: active ? !sort.asc : true })}
                       >
                         {' '}
-                        {label} <Icon name={active ? (sort.asc ? 'arrow-up' : 'arrow-down') : 'chevron-down'} />
+                        {label}{' '}
+                        <Icon
+                          name={active ? (sort.asc ? 'arrow-up' : 'arrow-down') : 'chevron-down'}
+                          className={cx('size-3.5', active ? 'text-primary' : 'text-muted-foreground')}
+                        />
                       </button>
                     </th>
                   );
@@ -116,38 +133,38 @@ export function MedicationsPage({
             <tbody id="medication-rows">
               {rows.length ? (
                 rows.map((row) => (
-                  <tr key={`${row.patientId}-${row.prescription.id}`}>
-                    <td>
+                  <tr key={`${row.patientId}-${row.prescription.id}`} className="hover:bg-card-hover">
+                    <td className="min-w-32.5">
                       <strong>
-                        <Link to={`/patients/${row.patientId}`} className="patient-name">
+                        <Link
+                          to={`/patients/${row.patientId}`}
+                          className="text-primary underline underline-offset-3 wrap-anywhere hover:text-primary-hover"
+                        >
                           {row.patientName}
                         </Link>
                       </strong>
                     </td>
-                    <td className="nowrap">{row.nhsNumber}</td>
-                    <td>{row.medication}</td>
-                    <td className="nowrap">{formatDate(row.startDate)}</td>
-                    <td className="nowrap">{row.endDate ? formatDate(row.endDate) : 'Ongoing'}</td>
+                    <td className="whitespace-nowrap">{row.nhsNumber}</td>
+                    <td className="min-w-42.5">{row.medication}</td>
+                    <td className="whitespace-nowrap">{formatDate(row.startDate)}</td>
+                    <td className="whitespace-nowrap">{row.endDate ? formatDate(row.endDate) : 'Ongoing'}</td>
                     <td>
-                      <span className={`pill ${row.status === 'Completed' ? 'neutral' : ''}`}>{row.status}</span>
+                      <Pill tone={row.status === 'Completed' ? 'neutral' : 'brand'}>{row.status}</Pill>
                     </td>
-                    <td>
-                      <div className="table-actions">
-                        <button
-                          type="button"
-                          className="button secondary x-small"
-                          aria-haspopup="dialog"
-                          onClick={() => setDialog({ kind: 'view-medication', prescription: row.prescription })}
-                        >
-                          View Medication Record
-                        </button>
-                      </div>
+                    <td className="min-w-45">
+                      <Button
+                        size="xs"
+                        aria-haspopup="dialog"
+                        onClick={() => setDialog({ kind: 'view-medication', prescription: row.prescription })}
+                      >
+                        View Medication Record
+                      </Button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="table-empty">
+                  <td colSpan={7} className="h-30 text-center text-muted-foreground">
                     No medication records match these filters.
                   </td>
                 </tr>

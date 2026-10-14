@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { IAction, Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 import 'survey-core/survey-core.min.css';
+import './tailwind-adapter.css';
 import { applyClinicFormTheme, registerClinicModel } from '../theme/clinicTheme';
 import { demoTools } from '../theme/demoTools';
 

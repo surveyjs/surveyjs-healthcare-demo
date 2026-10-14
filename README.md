@@ -58,7 +58,7 @@ The shared header shows the HEALTHCARE brand, role-appropriate route links with 
 | Form builder | `survey-creator-core`, `survey-creator-react` |
 | PDF export | `survey-pdf` (SurveyJS PDF Generator; commercial license required for commercial use) |
 | Backend | Express + `better-sqlite3` (SQLite) |
-| Styling | Plain CSS ([styles.css](src/styles.css)) + a shared SurveyJS theme ([clinicTheme.ts](src/theme/clinicTheme.ts)) |
+| Styling | Tailwind CSS v4 utilities, design tokens in [styles.css](src/styles.css), and a Tailwind → SurveyJS adapter ([tailwind-adapter.css](src/survey/tailwind-adapter.css)) |
 | Testing | Vitest (unit, incl. a SurveyJS schema lint gate) + Playwright (e2e) |
 | Icons | Feather (inline SVG subset in [featherIcons.ts](src/ui/featherIcons.ts)) |
 
@@ -99,13 +99,14 @@ SurveyJS JSON → Survey Creator → edited JSON → Form Library → applicatio
 
 ## How SurveyJS Was Themed to Match the Host Application
 
-One theme drives both the SurveyJS forms and the surrounding clinic UI:
+One set of Tailwind tokens drives both the SurveyJS forms and the surrounding clinic UI:
 
-- **Clinic theme** — [clinicTheme.ts](src/theme/clinicTheme.ts) extends the built-in `FlatLightPanelless` / `FlatDarkPanelless` themes with the clinic palette, Open Sans typography, radii, and spacing tokens (`--sjs2-*`). The selected palette is also written to the document root, and [styles.css](src/styles.css) derives the app's own tokens from it (`--brand: var(--sjs2-color-project-brand-600)`, …), so the chrome and the forms always share colors.
-- **Per-form tokens** — `getClinicFormTheme()` adds host-specific values on each model (tighter insets on narrow screens, flush filter forms, dynamic-panel spacing, tertiary-surface action colors) without leaking them into Creator.
-- **Creator** — `applyClinicCreatorTheme()` gives the Survey Creator the same palette (`applyCreatorTheme`) and the form theme for its preview.
+- **Design tokens** — [styles.css](src/styles.css) declares the clinic palette, font, and radius in Tailwind's `@theme` (`--color-primary`, `--color-card`, `--color-foreground`, …) and redefines the colors under `[data-theme="dark"]`. The app UI is built from Tailwind utilities (`bg-card`, `text-primary`, …); shared class bundles and primitives live in [components.tsx](src/ui/components.tsx).
+- **Tailwind → SurveyJS adapter** — [tailwind-adapter.css](src/survey/tailwind-adapter.css) maps those semantic tokens onto SurveyJS's `--sjs2-*` variables, so forms follow the palette (and dark mode) with no colors in JS. A retuning block in [styles.css](src/styles.css) keeps the clinic's form density (44px controls, roomy nested panels) on top of the adapter's compact Tailwind defaults.
+- **Base and per-form themes** — [clinicTheme.ts](src/theme/clinicTheme.ts) applies `DefaultLightPanelless` / `DefaultDarkPanelless` for the remaining semantic slots (minus any variable a stylesheet already sets, so the adapter always wins) plus host-specific layout (tighter insets on narrow screens, flush filter forms, dynamic-panel spacing).
+- **Creator** — `applyClinicCreatorTheme()` points the Survey Creator's panes at the same tokens and keeps its native density.
 - **Basic headers** — schemas use `"headerView": "basic"`, so form titles and descriptions render inside the card; [styles.css](src/styles.css) contains the small layout bridges SurveyJS needs (header divider, search header actions, dynamic-panel header spacing).
-- **Dark mode and outlines** — [demoTools.ts](src/theme/demoTools.ts) renders the display dock (a manual popover, moved into open dialogs so it stays above the top layer). It switches the palette and re-themes every mounted form and Creator; the outline toggle marks each `[data-survey-component]` mount point.
+- **Dark mode and outlines** — [demoTools.ts](src/theme/demoTools.ts) renders the display dock (a manual popover, moved into open dialogs so it stays above the top layer). It switches `data-theme` and re-themes every mounted form and Creator; the outline toggle marks each `[data-survey-component]` mount point.
 
 The result: SurveyJS forms inherit the app's colors, fonts, borders, focus rings, and spacing without forking any SurveyJS CSS.
 
@@ -159,11 +160,12 @@ src/
     schemas/            SurveyJS JSON definitions
     SurveyRenderer      Reusable renderer (Model creation, initial data, validation, completion)
     SurveyCreatorModal  Embedded Survey Creator
+    tailwind-adapter.css Tailwind tokens → SurveyJS --sjs2-* variables
   theme/
-    clinicTheme         Shared SurveyJS + app theme (light/dark)
+    clinicTheme         SurveyJS base, per-form layout and Creator themes (light/dark)
     demoTools           Display dock (theme switch, SurveyJS outlines)
   ui/                 Feather icons, shared page components, formatting helpers
-  styles.css          Application stylesheet
+  styles.css          Tailwind entry: design tokens and SurveyJS bridges
   data/
     initialData         Seed demo patients and users
   types/                Patient, form, and auth type definitions

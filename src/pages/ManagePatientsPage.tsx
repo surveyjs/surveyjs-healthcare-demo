@@ -6,7 +6,16 @@ import { SurveyRenderer } from '../survey/SurveyRenderer';
 import { patientRepository } from '../repositories/patientRepository';
 import { Patient } from '../types/patient';
 import { Icon } from '../ui/Icon';
-import { editFormAction, PageHeading, useDocumentTitle, useFormSchema } from '../ui/components';
+import {
+  Button,
+  cx,
+  editFormAction,
+  emptyPanelClass,
+  PageHeading,
+  panelClass,
+  useDocumentTitle,
+  useFormSchema,
+} from '../ui/components';
 import { filterPatients, PatientQuery } from '../ui/format';
 
 interface ManagePatientsPageProps {
@@ -111,7 +120,7 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({ onOpenFo
         description="Search for an existing patient using one or more criteria. Leave fields blank for broader results."
         icon="users"
       />
-      <section className="panel search-panel">
+      <section className={cx(panelClass, 'search-panel')}>
         <SurveyRenderer
           id="survey-search"
           schema={schema}
@@ -138,13 +147,19 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({ onOpenFo
           onModelReady={(model) => (searchModel.current = model)}
         />
       </section>
-      <section className="results">
-        <h3 className="result-count" id="result-count" tabIndex={-1} aria-live="polite" aria-atomic="true">
+      <section>
+        <h3
+          className="mt-7 mb-3.75 text-sm font-semibold text-muted-foreground"
+          id="result-count"
+          tabIndex={-1}
+          aria-live="polite"
+          aria-atomic="true"
+        >
           {matchText}
         </h3>
         <div id="patient-results">
           {rows.length ? (
-            <div className="patient-list">
+            <div className="flex flex-col gap-3.5">
               {rows.map((patient) => (
                 <PatientCard
                   key={patient.id}
@@ -156,16 +171,17 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({ onOpenFo
               ))}
             </div>
           ) : (
-            <div className="panel empty">
-              <span className="empty-icon">
+            <div className={emptyPanelClass}>
+              <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-xl bg-primary-soft text-primary">
                 <Icon name="users" />
               </span>
-              <h3>No patients matched your search</h3>
-              <p>Try broadening your search criteria or register a new patient using the registration form.</p>
-              <button type="button" className="button" onClick={clearFilters}>
-                <Icon name="refresh-cw" />
+              <h3 className="text-base font-semibold sm:text-[17px]">No patients matched your search</h3>
+              <p className="mx-auto mt-2 mb-5.5 max-w-140 text-[13px] text-muted-foreground sm:text-sm">
+                Try broadening your search criteria or register a new patient using the registration form.
+              </p>
+              <Button icon="refresh-cw" className="max-sm:text-xs" onClick={clearFilters}>
                 Reset filters to view all patients
-              </button>
+              </Button>
             </div>
           )}
         </div>
