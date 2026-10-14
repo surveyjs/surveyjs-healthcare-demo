@@ -1,235 +1,190 @@
-import React, { useState, useEffect } from 'react';
-import { Sidebar } from '../components/layout/Sidebar';
-import { PatientDetailsCard } from '../components/patients/PatientDetailsCard';
-import { PatientHistory } from '../components/patients/PatientHistory';
-import { EditPatientModal } from '../components/modals/EditPatientModal';
-import { AddVisitModal } from '../components/modals/AddVisitModal';
-import { AddPrescriptionModal } from '../components/modals/AddPrescriptionModal';
-import { AppointmentRequestModal } from '../components/modals/AppointmentRequestModal';
+import React, { useEffect, useState } from 'react';
+import { OpenFormBuilder, PatientDialog, PatientDialogs } from '../components/modals/PatientDialogs';
+import { DetailsList, MedicationList, VisitList } from '../components/patients/PatientRecords';
 import { patientRepository } from '../repositories/patientRepository';
-import { Patient, Prescription, Visit } from '../types/patient';
-import { FormId } from '../types/forms';
-import { ArrowLeft } from 'lucide-react';
+import { Patient } from '../types/patient';
+import { Icon } from '../ui/Icon';
+import { Breadcrumbs, Button, NotFound, PageHeading, useDocumentTitle } from '../ui/components';
+import { dateOfBirthWithAge, formatDate, formatPhone, fullName, initials, patientAddress } from '../ui/format';
 
 interface PatientProfilePageProps {
   patientId: string;
-  /** 'patient' hides staff-only actions (form builder, prescriptions) and enables visit revocation. */
-  viewerRole?: 'doctor' | 'patient';
-  onBackToSearch?: () => void;
-  /** onReturn restores the originating view (reopens the modal) after the builder's "Save & Apply Form". */
-  onOpenFormBuilder?: (formId: FormId, onReturn?: () => void) => void;
-  showToast: (type: 'success' | 'error' | 'info', title: string, message?: string) => void;
+  onOpenFormBuilder: OpenFormBuilder;
+  showToast: (message: string) => void;
 }
 
-export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({
-  patientId,
-  viewerRole = 'doctor',
-  onBackToSearch,
-  onOpenFormBuilder,
-  showToast,
-}) => {
-  const isPatientViewer = viewerRole === 'patient';
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
-  const [visitBeingEdited, setVisitBeingEdited] = useState<Visit | null>(null);
-  const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
-  const [isAppointmentRequestOpen, setIsAppointmentRequestOpen] = useState(false);
-  const [prescriptionBeingEdited, setPrescriptionBeingEdited] = useState<Prescription | null>(null);
+export const PatientProfilePage: React.FC<PatientProfilePageProps> = ({ patientId, onOpenFormBuilder, showToast }) => {
+  useDocumentTitle('Patient Profile');
+  const [patient, setPatient] = useState<Patient | null | undefined>(undefined);
+  const [dialog, setDialog] = useState<PatientDialog | null>(null);
+  const [detailsExpanded, setDetailsExpanded] = useState(true);
 
-  // Load patient from the database
   useEffect(() => {
     let cancelled = false;
-    patientRepository
-      .getPatientById(patientId)
-      .then((loaded) => {
-        if (!cancelled && loaded) {
-          setPatient(loaded);
-        }
-      })
-      .catch((e) => console.error('Failed to load patient:', e));
+    const load = () =>
+      patientRepository
+        .getPatientById(patientId)
+        .then((loaded) => {
+          if (!cancelled) setPatient(loaded ?? null);
+        })
+        .catch((e) => console.error('Failed to load patient:', e));
+    load();
+    const unsubscribe = patientRepository.subscribe(load);
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [patientId]);
 
-  // Subscribe to changes in patientRepository
-  useEffect(() => {
-    const unsubscribe = patientRepository.subscribe(() => {
-      patientRepository
-        .getPatientById(patientId)
-        .then((updated) => {
-          if (updated) {
-            setPatient(updated);
-          }
-        })
-        .catch((e) => console.error('Failed to reload patient:', e));
-    });
-    return unsubscribe;
-  }, [patientId]);
+  if (patient === undefined) return null;
+  if (patient === null) return <NotFound backPath="/manage" backLabel="Back to Manage Patients" />;
 
-  if (!patient) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-12 text-center">
-        <p className="text-gray-500 mb-4">Patient record not found.</p>
-        {onBackToSearch && (
-          <button
-            type="button"
-            onClick={onBackToSearch}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#00695c] hover:underline"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Manage Patients
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  const patientFullName = `${patient.firstName} ${patient.lastName}`;
-
-  const openNewVisitModal = () => {
-    setVisitBeingEdited(null);
-    setIsVisitModalOpen(true);
-  };
-
-  const openEditVisitModal = (visit: Visit) => {
-    setVisitBeingEdited(visit);
-    setIsVisitModalOpen(true);
-  };
-
-  const closeVisitModal = () => {
-    setIsVisitModalOpen(false);
-    setVisitBeingEdited(null);
-  };
-
-  const openNewPrescriptionModal = () => {
-    setPrescriptionBeingEdited(null);
-    setIsPrescriptionModalOpen(true);
-  };
-
-  const openEditPrescriptionModal = (prescription: Prescription) => {
-    setPrescriptionBeingEdited(prescription);
-    setIsPrescriptionModalOpen(true);
-  };
-
-  const closePrescriptionModal = () => {
-    setIsPrescriptionModalOpen(false);
-    setPrescriptionBeingEdited(null);
+  const name = fullName(patient);
+  const sex = patient.gender?.toLowerCase() === 'female' ? 'Female' : patient.gender?.toLowerCase() === 'male' ? 'Male' : '';
+  const emergency = patient.emergencyContact;
+  const detailToggle = {
+    'aria-expanded': detailsExpanded,
+    'aria-controls': 'basic-details-content contact-details-content',
+    onClick: () => setDetailsExpanded((expanded) => !expanded),
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* Left Sidebar matching screenshot */}
-        <Sidebar
-          type="profile"
-          patientName={patientFullName}
-          onOpenFormBuilder={onOpenFormBuilder}
-        />
-        {/* Main Profile Layout */}
-        <div className="flex-1 w-full space-y-6">
-          {/* Top Patient Profile Header & Details */}
-          <PatientDetailsCard
-            patient={patient}
-            onEditPatient={isPatientViewer ? undefined : () => setIsEditModalOpen(true)}
-            onAddVisit={isPatientViewer ? undefined : openNewVisitModal}
-            onAddPrescription={isPatientViewer ? undefined : openNewPrescriptionModal}
-            onRequestAppointment={isPatientViewer ? () => setIsAppointmentRequestOpen(true) : undefined}
-            showStatus={!isPatientViewer}
-          />
-
-          {/* Clinical Visits & Medication History */}
-          <PatientHistory
-            visits={patient.visits || []}
-            prescriptions={patient.prescriptions || []}
-            viewerRole={viewerRole}
-            onOpenVisitModal={isPatientViewer ? undefined : openNewVisitModal}
-            onOpenPrescriptionModal={isPatientViewer ? undefined : openNewPrescriptionModal}
-            onEditVisit={isPatientViewer ? undefined : openEditVisitModal}
-            onEditPrescription={isPatientViewer ? undefined : openEditPrescriptionModal}
-          />
+    <>
+      <Breadcrumbs items={[{ label: 'Manage Patients', path: '/manage' }, { label: name }]} />
+      <PageHeading title="Patient Profile" description={name} icon="user" />
+      <div className="profile-layout">
+        <aside className="panel builder-tools">
+          <h3>Form Builder Tools</h3>
+          <p className="muted">Customize forms used to capture patient, visit and intake data.</p>
+          <div className="builder-tool-actions">
+            <Button icon="settings" onClick={() => onOpenFormBuilder('edit-patient')}>
+              <span>Edit Patient Form</span>
+            </Button>
+            <Button icon="settings" onClick={() => onOpenFormBuilder('add-new-visit')}>
+              <span>Edit Visit Form</span>
+            </Button>
+            <Button icon="settings" onClick={() => onOpenFormBuilder('patient-registration')}>
+              <span>Edit Registration Form</span>
+            </Button>
+          </div>
+        </aside>
+        <div className="profile-main">
+          <section className="panel patient-overview">
+            <div className="profile-summary">
+              <span className="avatar">{initials(name)}</span>
+              <div>
+                <div className="name-row">
+                  <h2>{name}</h2>
+                  <span className="pill">{patient.status || 'Active'}</span>
+                </div>
+                <p className="muted">
+                  DOB: {dateOfBirthWithAge(patient)} · NHS: {patient.nhsNumber}
+                  <br />
+                  Registered: {formatDate(patient.registeredDate)}
+                </p>
+              </div>
+              <div className="profile-actions">
+                <Button icon="edit-2" onClick={() => setDialog({ kind: 'edit-patient', patient })}>
+                  Edit Patient
+                </Button>
+                <Button icon="file-plus" onClick={() => setDialog({ kind: 'prescription', patient })}>
+                  Add Prescription
+                </Button>
+                <Button icon="calendar" variant="primary" onClick={() => setDialog({ kind: 'visit', patient })}>
+                  Record Visit
+                </Button>
+              </div>
+            </div>
+            <div className="profile-grid profile-details-grid">
+              <section className="profile-detail-section">
+                <h2 className="profile-detail-title">
+                  <button type="button" className="profile-detail-heading" {...detailToggle}>
+                    <span>Basic Details</span>
+                  </button>
+                </h2>
+                <div className="panel-body" id="basic-details-content" hidden={!detailsExpanded}>
+                  <DetailsList
+                    items={[
+                      ['Sex', sex],
+                      ['NHS Number', patient.nhsNumber],
+                      ['Date of birth', dateOfBirthWithAge(patient)],
+                      ['Registered on', formatDate(patient.registeredDate)],
+                      ['Allergies', patient.knownAllergies],
+                    ]}
+                  />
+                </div>
+              </section>
+              <section className="profile-detail-section">
+                <h2 className="profile-detail-title">
+                  <button type="button" className="profile-detail-heading" {...detailToggle}>
+                    <span>Contact Details</span>
+                    <Icon name="chevron-down" />
+                  </button>
+                </h2>
+                <div className="panel-body" id="contact-details-content" hidden={!detailsExpanded}>
+                  <DetailsList
+                    items={[
+                      ['Phone', patient.phoneNumber],
+                      ['Email', patient.email],
+                      ['Address', patientAddress(patient)],
+                      [
+                        'Emergency Contact',
+                        [emergency?.fullName, formatPhone(emergency?.phoneNumber)].filter(Boolean).join(' · '),
+                      ],
+                    ]}
+                  />
+                </div>
+              </section>
+            </div>
+          </section>
+          <div className="profile-grid">
+            <section className="panel history-panel">
+              <div className="panel-heading history-heading">
+                <h2>Visits</h2>
+                <Button
+                  icon="plus"
+                  variant="primary history-add-button"
+                  aria-label="Record Visit"
+                  title="Record Visit"
+                  aria-haspopup="dialog"
+                  onClick={() => setDialog({ kind: 'visit', patient })}
+                />
+              </div>
+              <VisitList
+                visits={patient.visits || []}
+                onView={(visit) => setDialog({ kind: 'view-visit', visit })}
+                onEdit={(visit) => setDialog({ kind: 'visit', patient, visit })}
+              />
+            </section>
+            <section className="panel history-panel">
+              <div className="panel-heading history-heading">
+                <h2>Prescribed Medication</h2>
+                <Button
+                  icon="plus"
+                  variant="primary history-add-button"
+                  aria-label="Add Prescription"
+                  title="Add Prescription"
+                  aria-haspopup="dialog"
+                  onClick={() => setDialog({ kind: 'prescription', patient })}
+                />
+              </div>
+              <MedicationList
+                prescriptions={patient.prescriptions || []}
+                onEdit={(prescription) => setDialog({ kind: 'prescription', patient, prescription })}
+              />
+            </section>
+          </div>
         </div>
       </div>
-
-      {/* Edit Patient Modal */}
-      <EditPatientModal
-        isOpen={isEditModalOpen}
-        patient={patient}
-        onClose={() => setIsEditModalOpen(false)}
-        onSaved={(updated) => {
-          setPatient(updated);
-          showToast('success', 'Patient updated', 'Patient details successfully saved.');
+      <PatientDialogs
+        dialog={dialog}
+        onClose={() => setDialog(null)}
+        onSaved={showToast}
+        onOpenBuilder={(formId, reopen) => {
+          setDialog(null);
+          onOpenFormBuilder(formId, () => setDialog(reopen));
         }}
-        onOpenBuilder={
-          onOpenFormBuilder
-            ? (formId) => {
-                setIsEditModalOpen(false);
-                onOpenFormBuilder(formId, () => setIsEditModalOpen(true));
-              }
-            : undefined
-        }
       />
-
-      {/* Add New Visit Modal */}
-      <AddVisitModal
-        isOpen={isVisitModalOpen}
-        patient={patient}
-        visit={visitBeingEdited}
-        onClose={closeVisitModal}
-        onSaved={(updated) => {
-          setPatient(updated);
-          showToast(
-            'success',
-            visitBeingEdited ? 'Visit updated' : 'Visit recorded',
-            visitBeingEdited ? 'Clinical encounter updated.' : 'Clinical encounter added to patient history.',
-          );
-        }}
-        onOpenBuilder={
-          onOpenFormBuilder
-            ? (formId) => {
-                setIsVisitModalOpen(false);
-                onOpenFormBuilder(formId, () => setIsVisitModalOpen(true));
-              }
-            : undefined
-        }
-      />
-
-      {/* Add New Prescription Modal */}
-      <AddPrescriptionModal
-        isOpen={isPrescriptionModalOpen}
-        patient={patient}
-        prescription={prescriptionBeingEdited}
-        onClose={closePrescriptionModal}
-        onSaved={(updated) => {
-          setPatient(updated);
-          showToast(
-            'success',
-            prescriptionBeingEdited ? 'Prescription updated' : 'Prescription added',
-            prescriptionBeingEdited ? 'Medication record updated.' : 'Medication course added to patient profile.',
-          );
-        }}
-        onOpenBuilder={
-          onOpenFormBuilder
-            ? (formId) => {
-                setIsPrescriptionModalOpen(false);
-                onOpenFormBuilder(formId, () => setIsPrescriptionModalOpen(true));
-              }
-            : undefined
-        }
-      />
-
-      {isPatientViewer && (
-        <AppointmentRequestModal
-          isOpen={isAppointmentRequestOpen}
-          patient={patient}
-          onClose={() => setIsAppointmentRequestOpen(false)}
-          onSubmitted={() => showToast(
-            'success',
-            'Appointment request sent',
-            'Your practice will contact you to confirm an appointment.',
-          )}
-        />
-      )}
-    </div>
+    </>
   );
 };

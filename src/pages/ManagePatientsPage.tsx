@@ -1,203 +1,184 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Sidebar } from '../components/layout/Sidebar';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActionContainer, Model } from 'survey-core';
 import { PatientCard } from '../components/patients/PatientCard';
+import { OpenFormBuilder, PatientDialog, PatientDialogs } from '../components/modals/PatientDialogs';
 import { SurveyRenderer } from '../survey/SurveyRenderer';
-import { formRepository } from '../repositories/formRepository';
 import { patientRepository } from '../repositories/patientRepository';
-import { FormId } from '../types/forms';
 import { Patient } from '../types/patient';
-import { Model } from 'survey-core';
-import { Search, X, Settings, UserX } from 'lucide-react';
+import { Icon } from '../ui/Icon';
+import { editFormAction, PageHeading, useDocumentTitle, useFormSchema } from '../ui/components';
+import { filterPatients, PatientQuery } from '../ui/format';
 
 interface ManagePatientsPageProps {
-  onOpenProfile: (patientId: string) => void;
-  onOpenFormBuilder: (formId: FormId) => void;
+  onOpenFormBuilder: OpenFormBuilder;
+  showToast: (message: string) => void;
 }
 
-export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({
-  onOpenProfile,
-  onOpenFormBuilder,
-}) => {
-  const [surveyModel, setSurveyModel] = useState<Model | null>(null);
-  const [schemaVersion, setSchemaVersion] = useState(0);
-  const [searchResults, setSearchResults] = useState<Patient[]>([]);
-  const [hasSearched, setHasSearched] = useState(false);
-  // Last-write-wins: a slow earlier request (e.g. the initial load) must not overwrite newer results
-  const requestSeqRef = useRef(0);
+const EMPTY_QUERY: PatientQuery = { name: '', dob: '', nhs: '' };
+// Filters survive navigating to a profile and back, like the search form's answers.
+let lastQuery: PatientQuery = EMPTY_QUERY;
 
-  const applyResults = async (fetcher: () => Promise<Patient[]>) => {
-    const requestId = ++requestSeqRef.current;
-    const results = await fetcher();
-    if (requestId === requestSeqRef.current) {
-      setSearchResults(results);
-      setHasSearched(true);
-    }
+const queryFromSurvey = (data: Record<string, any>): PatientQuery => ({
+  name: data.patient_name ?? data.last_name ?? '',
+  dob: data.date_of_birth ?? '',
+  nhs: data['nhs-number'] ?? '',
+});
+
+export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({ onOpenFormBuilder, showToast }) => {
+  useDocumentTitle('Manage Patients');
+  const schema = useFormSchema('patient-search');
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [query, setQueryState] = useState(lastQuery);
+  const [dialog, setDialog] = useState<PatientDialog | null>(null);
+  const searchModel = useRef<Model | null>(null);
+
+  const setQuery = (next: PatientQuery) => {
+    lastQuery = next;
+    setQueryState(next);
   };
 
-  // Initial load: show all patients from the database
   useEffect(() => {
-    applyResults(() => patientRepository.getAllPatients()).catch((e) =>
-      console.error('Failed to load patients:', e),
-    );
+    const load = () =>
+      patientRepository
+        .getAllPatients()
+        .then(setPatients)
+        .catch((e) => console.error('Failed to load patients:', e));
+    load();
+    return patientRepository.subscribe(load);
   }, []);
 
-  // Subscribe to changes in patients or schema
+  // The row menus close on an outside click, and Escape returns focus to the open menu's button.
   useEffect(() => {
-    const unsubPatients = patientRepository.subscribe(() => {
-      applyResults(() => patientRepository.getAllPatients()).catch((e) =>
-        console.error('Failed to reload patients:', e),
-      );
-    });
-
-    const unsubForms = formRepository.subscribe((changedId) => {
-      if (changedId === 'patient-search') {
-        setSchemaVersion((v) => v + 1);
+    const handleClick = (event: MouseEvent) =>
+      document.querySelectorAll<HTMLDetailsElement>('.patient-menu[open]').forEach((menu) => {
+        if (!menu.contains(event.target as Node)) menu.open = false;
+      });
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+      const menu = document.querySelector<HTMLDetailsElement>('.patient-menu[open]');
+      if (menu) {
+        event.preventDefault();
+        menu.open = false;
+        menu.querySelector('summary')?.focus({ preventScroll: true });
       }
-    });
-
+    };
+    document.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      unsubPatients();
-      unsubForms();
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
-  const schema = formRepository.getForm('patient-search');
+  // Enter commits the current field and applies filters without clearing them.
+  useEffect(() => {
+    const host = document.getElementById('survey-search');
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (
+        event.key !== 'Enter' ||
+        event.isComposing ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        !target.matches('input') ||
+        target.getAttribute('aria-expanded') === 'true'
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      target.blur();
+      target.focus({ preventScroll: true });
+      if (searchModel.current) setQuery(queryFromSurvey(searchModel.current.data));
+    };
+    host?.addEventListener('keydown', handleKeyDown, true);
+    return () => host?.removeEventListener('keydown', handleKeyDown, true);
+  }, [schema]);
 
-  const handleSearchExecute = async (data: Record<string, any>) => {
-    try {
-      await applyResults(() =>
-        patientRepository.searchPatients({
-          lastName: data.last_name,
-          dateOfBirth: data.date_of_birth,
-          nhsNumber: data['nhs-number'],
-        }),
-      );
-    } catch (e) {
-      console.error('Search failed:', e);
-    }
+  const clearFilters = () => {
+    searchModel.current?.clear(true, false);
+    setQuery(EMPTY_QUERY);
   };
 
-  const handleSearchClick = () => {
-    if (surveyModel) {
-      handleSearchExecute(surveyModel.data || {});
-    }
-  };
-
-  const handleClearClick = async () => {
-    if (surveyModel) {
-      // clear(true) empties the fields; clear(false) would only reset the survey state
-      surveyModel.clear(true, true);
-    }
-    try {
-      await applyResults(() => patientRepository.getAllPatients());
-    } catch (e) {
-      console.error('Failed to reload patients:', e);
-    }
-  };
+  const rows = filterPatients(patients, query);
+  const matchText = `${rows.length} ${rows.length === 1 ? 'match' : 'matches'} found`;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* Left Sidebar matching screenshot */}
-        <Sidebar type="manage" onOpenFormBuilder={onOpenFormBuilder} />
-
-        {/* Main Content Area */}
-        <div className="flex-1 w-full space-y-6">
-          {/* Search Card */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6 sm:p-8 shadow-xs space-y-6">
-            <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-3">
-              Search for a Patient
-            </h2>
-
-            {/* SurveyJS Search Form */}
-            <div className="survey-container">
-              <SurveyRenderer
-                key={`search-${schemaVersion}`}
-                schema={schema}
-                onComplete={handleSearchExecute}
-                showNavigationButtons={false}
-                onModelReady={(model) => {
-                  // Commit text per keystroke; blur-commit text can be wiped by a re-render before Search reads it
-                  model.textUpdateMode = 'onTyping';
-                  setSurveyModel(model);
-                }}
-              />
+    <>
+      <PageHeading
+        title="Manage Patients"
+        description="Search for an existing patient using one or more criteria. Leave fields blank for broader results."
+        icon="users"
+      />
+      <section className="panel search-panel">
+        <SurveyRenderer
+          id="survey-search"
+          schema={schema}
+          data={{ patient_name: query.name, date_of_birth: query.dob, 'nhs-number': query.nhs }}
+          onSave={(data) => setQuery(queryFromSurvey(data))}
+          onValueChanged={(data) => setQuery(queryFromSurvey(data))}
+          actions={[{ id: 'clear-search', title: 'Clear filters', css: 'clinic-clear', action: clearFilters }]}
+          configure={(model) => {
+            model.textUpdateMode = 'onTyping';
+            model.showCompleteButton = false;
+            const toolbar = new ActionContainer();
+            toolbar.setActionsAppearance({ mode: 'tertiary-surface', size: 'large', style: 'brand', showBorder: true });
+            toolbar.cssClasses = { ...model.navigationBar.cssClasses, root: 'sd-action-bar search-header-actions' };
+            toolbar.setItems([
+              editFormAction('patient-search', 'Edit Search Form', () => onOpenFormBuilder('patient-search')),
+            ]);
+            model.addLayoutElement({
+              id: 'search-header-actions',
+              container: 'header',
+              component: 'sv-action-bar',
+              data: toolbar,
+            });
+          }}
+          onModelReady={(model) => (searchModel.current = model)}
+        />
+      </section>
+      <section className="results">
+        <h3 className="result-count" id="result-count" tabIndex={-1} aria-live="polite" aria-atomic="true">
+          {matchText}
+        </h3>
+        <div id="patient-results">
+          {rows.length ? (
+            <div className="patient-list">
+              {rows.map((patient) => (
+                <PatientCard
+                  key={patient.id}
+                  patient={patient}
+                  onRecordVisit={(p) => setDialog({ kind: 'visit', patient: p })}
+                  onAddPrescription={(p) => setDialog({ kind: 'prescription', patient: p })}
+                  onEditPatient={(p) => setDialog({ kind: 'edit-patient', patient: p })}
+                />
+              ))}
             </div>
-
-            {/* Search Actions matching screenshot */}
-            <div className="pt-6 border-t border-gray-200 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleSearchClick}
-                  className="inline-flex items-center gap-2 bg-[#00695c] hover:bg-[#004d40] text-white text-sm font-semibold px-5 py-2.5 rounded-md shadow-xs transition-colors cursor-pointer"
-                >
-                  <Search className="w-4 h-4" />
-                  <span>Search</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleClearClick}
-                  className="inline-flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-4 py-2.5 rounded-md transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4 text-gray-500" />
-                  <span>Clear</span>
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onOpenFormBuilder('patient-search')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[#00695c] bg-white border border-[#00695c] rounded-md hover:bg-teal-50 transition-colors cursor-pointer"
-              >
-                <Settings className="w-4 h-4 text-[#00695c]" />
-                <span>Customize Patient Search Form</span>
+          ) : (
+            <div className="panel empty">
+              <span className="empty-icon">
+                <Icon name="users" />
+              </span>
+              <h3>No patients matched your search</h3>
+              <p>Try broadening your search criteria or register a new patient using the registration form.</p>
+              <button type="button" className="button" onClick={clearFilters}>
+                <Icon name="refresh-cw" />
+                Reset filters to view all patients
               </button>
             </div>
-          </div>
-
-          {/* Search Results Area */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-700">
-                {searchResults.length === 1
-                  ? '1 match found'
-                  : `${searchResults.length} matches found`}
-              </h3>
-            </div>
-
-            {searchResults.length === 0 ? (
-              <div className="bg-white border border-gray-200 rounded-lg p-10 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-gray-100 text-gray-400 mx-auto flex items-center justify-center">
-                  <UserX className="w-6 h-6" />
-                </div>
-                <h4 className="text-base font-semibold text-gray-800">No patients matched your search</h4>
-                <p className="text-sm text-gray-500 max-w-md mx-auto">
-                  Try broadening your search criteria or register a new patient using the registration form.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleClearClick}
-                  className="inline-flex items-center gap-1.5 text-xs text-[#00695c] font-semibold hover:underline"
-                >
-                  Reset filters to view all patients
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {searchResults.map((patient) => (
-                  <PatientCard
-                    key={patient.id}
-                    patient={patient}
-                    onOpenProfile={onOpenProfile}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          )}
         </div>
-      </div>
-    </div>
+      </section>
+      <PatientDialogs
+        dialog={dialog}
+        onClose={() => setDialog(null)}
+        onSaved={showToast}
+        onOpenBuilder={(formId, reopen) => {
+          setDialog(null);
+          onOpenFormBuilder(formId, () => setDialog(reopen));
+        }}
+      />
+    </>
   );
 };

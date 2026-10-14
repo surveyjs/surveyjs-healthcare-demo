@@ -1,109 +1,100 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Model } from 'survey-core';
-import { DefaultLightPanelless } from 'survey-core/themes';
+import { IAction, Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 import 'survey-core/survey-core.min.css';
-import './tailwind-adapter.css';
+import { applyClinicFormTheme, registerClinicModel } from '../theme/clinicTheme';
+import { demoTools } from '../theme/demoTools';
+
+export type SurveyNavigationAction = Partial<IAction> & { id: string };
 
 export interface SurveyRendererProps {
+  /** Host element id; also prefixes SurveyJS element ids and selects host-specific theme tokens. */
+  id: string;
   schema: object;
-  initialData?: Record<string, any>;
-  onComplete?: (data: Record<string, any>) => void;
-  onValueChanged?: (name: string, value: any, allData: Record<string, any>) => void;
+  /** Initial answers; applied when the model is created. */
+  data?: Record<string, unknown>;
+  /** Called from onCompleting after validation passes; the form stays live (no completion page). */
+  onSave?: (data: Record<string, any>, model: Model) => void;
+  onValueChanged?: (data: Record<string, any>, model: Model) => void;
+  /** Extra footer navigation items, rendered after the Complete button. */
+  actions?: SurveyNavigationAction[];
   readOnly?: boolean;
-  completeText?: string;
-  showNavigationButtons?: boolean | string;
-  /** Set to false for modal-hosted forms so the "Thank you" page never flashes before the modal closes. */
-  showCompletePage?: boolean;
+  hideTitle?: boolean;
+  showNavigation?: boolean;
+  /** Final model customization before the first render. */
+  configure?: (model: Model) => void;
   onModelReady?: (model: Model) => void;
-  className?: string;
 }
 
+/** Renders a SurveyJS form with the shared clinic theme, matching the host's `.native-survey` mount point. */
 export const SurveyRenderer: React.FC<SurveyRendererProps> = ({
+  id,
   schema,
-  initialData,
-  onComplete,
+  data,
+  onSave,
   onValueChanged,
+  actions = [],
   readOnly = false,
-  completeText,
-  showNavigationButtons,
-  showCompletePage,
+  hideTitle = false,
+  showNavigation = true,
+  configure,
   onModelReady,
-  className = '',
 }) => {
-  const modelRef = useRef<Model | null>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  // Handlers are read through refs so a re-render never rebuilds the model.
+  const handlers = useRef({ onSave, onValueChanged, actions });
+  handlers.current = { onSave, onValueChanged, actions };
+  const themeOptions = useMemo(
+    () => ({ host: id, dynamicPanels: JSON.stringify(schema).includes('paneldynamic') }),
+    [id, schema],
+  );
 
-  const survey = useMemo(() => {
-    // Create new SurveyJS model from provided schema
-    const model = new Model(schema);
+  const model = useMemo(() => {
+    const m = new Model({
+      ...schema,
+      questionErrorLocation: 'bottom',
+      showQuestionNumbers: 'off',
+      showCompletePage: false,
+      widthMode: 'responsive',
+      showTitle: !hideTitle,
+      showNavigationButtons: showNavigation,
+      mode: readOnly ? 'display' : 'edit',
+    });
+    m.elementIdPrefix = id + '-';
+    applyClinicFormTheme(m, themeOptions);
+    if (data) m.data = { ...m.data, ...structuredClone(data) };
+    m.onCompleting.add((sender, options) => {
+      options.allow = false;
+      handlers.current.onSave?.(structuredClone(sender.data), sender);
+    });
+    m.onValueChanged.add((sender) => handlers.current.onValueChanged?.(sender.data, sender));
+    actions.forEach((action, index) =>
+      m.addNavigationItem({
+        visibleIndex: 60 + index * 10,
+        ...action,
+        action: () => handlers.current.actions.find((item) => item.id === action.id)?.action?.(),
+      }),
+    );
+    configure?.(m);
+    return m;
+    // The model is rebuilt only for a new schema or display mode, like the designer's render().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, schema, readOnly, hideTitle, showNavigation, themeOptions]);
 
-    // Panelless base; the host look comes from the Tailwind adapter (tailwind-adapter.css)
-    model.applyTheme(DefaultLightPanelless);
-
-    // Titles are rendered by the host pages/modals
-    model.showTitle = false;
-
-    // Validation errors belong under the input, not above it
-    model.questionErrorLocation = 'bottom';
-
-    if (completeText) {
-      model.completeText = completeText;
-    }
-
-    if (showNavigationButtons !== undefined) {
-      model.showNavigationButtons = showNavigationButtons;
-    }
-
-    if (showCompletePage !== undefined) {
-      model.showCompletePage = showCompletePage;
-    }
-
-    if (readOnly) {
-      model.mode = 'display';
-    }
-
-    if (initialData) {
-      model.data = initialData;
-    }
-
-    return model;
-  }, [schema, readOnly, completeText, showNavigationButtons, showCompletePage]);
+  useEffect(() => registerClinicModel(model, themeOptions), [model, themeOptions]);
 
   useEffect(() => {
-    modelRef.current = survey;
+    onModelReady?.(model);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [model]);
 
-    if (initialData) {
-      survey.data = initialData;
-    }
-
-    const completeHandler = (sender: Model) => {
-      if (onComplete) {
-        onComplete(sender.data);
-      }
-    };
-
-    const valueChangedHandler = (sender: Model, options: any) => {
-      if (onValueChanged) {
-        onValueChanged(options.name, options.value, sender.data);
-      }
-    };
-
-    survey.onComplete.add(completeHandler);
-    survey.onValueChanged.add(valueChangedHandler);
-
-    if (onModelReady) {
-      onModelReady(survey);
-    }
-
-    return () => {
-      survey.onComplete.remove(completeHandler);
-      survey.onValueChanged.remove(valueChangedHandler);
-    };
-  }, [survey, initialData, onComplete, onValueChanged, onModelReady]);
+  useEffect(() => {
+    if (hostRef.current) demoTools.mark(hostRef.current);
+  }, []);
 
   return (
-    <div className={`survey-container survey-custom-wrapper ${className}`}>
-      <Survey model={survey} />
+    <div id={id} ref={hostRef} className="native-survey">
+      <Survey model={model} />
     </div>
   );
 };

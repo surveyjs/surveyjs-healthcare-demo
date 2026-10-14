@@ -1,90 +1,98 @@
-import React from 'react';
-import { UserCheck } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Patient } from '../../types/patient';
+import { Icon } from '../../ui/Icon';
+import { dateOfBirthWithAge, formatDate, fullName, initials, patientAddress } from '../../ui/format';
 
 interface PatientCardProps {
   patient: Patient;
-  onOpenProfile: (patientId: string) => void;
+  onRecordVisit: (patient: Patient) => void;
+  onAddPrescription: (patient: Patient) => void;
+  onEditPatient: (patient: Patient) => void;
 }
 
-export const PatientCard: React.FC<PatientCardProps> = ({ patient, onOpenProfile }) => {
-  const initials = `${patient.firstName?.[0] || ''}${patient.lastName?.[0] || ''}`.toUpperCase();
+// Patient actions stay in the results list, with profile navigation on the name.
+export const PatientCard: React.FC<PatientCardProps> = ({ patient, onRecordVisit, onAddPrescription, onEditPatient }) => {
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  const name = fullName(patient);
+  const profilePath = `/patients/${patient.id}`;
 
-  const formattedAddress = [
-    patient.address?.addressLine1,
-    patient.address?.addressLine2,
-    patient.address?.townCity,
-    patient.address?.postcode,
-  ]
-    .filter(Boolean)
-    .join(', ');
-
-  // Format DOB display
-  const dobDisplay = patient.dateOfBirth
-    ? `${patient.dateOfBirth.includes('-') ? patient.dateOfBirth.split('-').reverse().join('/') : patient.dateOfBirth} (${patient.age || 39})`
-    : 'Unknown';
+  // Menu items return focus to the menu button so the dialog restores it on close.
+  const fromMenu = (action: (patient: Patient) => void) => () => {
+    const menu = menuRef.current;
+    if (menu) {
+      menu.open = false;
+      menu.querySelector('summary')?.focus({ preventScroll: true });
+    }
+    action(patient);
+  };
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpenProfile(patient.id)}
-      onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onOpenProfile(patient.id);
-        }
-      }}
-      aria-label="Open Profile"
-      aria-describedby={`patient-${patient.id}-name`}
-      className="w-full appearance-none text-left bg-white border border-gray-200 rounded-lg p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors hover:border-gray-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00695c] cursor-pointer"
-    >
-      <div className="flex items-start gap-4">
-        {/* Teal Initials Avatar */}
-        <div className="w-14 h-14 rounded-full bg-[#b2dfdb] text-[#004d40] flex items-center justify-center font-bold text-xl shrink-0 shadow-2xs">
-          {initials}
+    <article className="panel patient-card">
+      <span className="avatar" aria-hidden="true">
+        {initials(name)}
+      </span>
+      <div className="patient-content">
+        <h3>
+          <Link to={profilePath} className="patient-name" aria-label={`Open Profile: ${name}`}>
+            {name}
+          </Link>
+        </h3>
+        <div className="patient-details">
+          <span>
+            <span className="muted">Date of birth</span> {dateOfBirthWithAge(patient)}
+          </span>
+          <span>
+            <span className="muted">NHS number</span> {patient.nhsNumber}
+          </span>
+          <span>
+            <span className="muted">Phone</span> {patient.phoneNumber}
+          </span>
+          <span>
+            <span className="muted">Registered</span> {formatDate(patient.registeredDate)}
+          </span>
         </div>
-
-        {/* Info cluster */}
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-3">
-              <h3 id={`patient-${patient.id}-name`} className="text-lg font-bold text-gray-900 tracking-tight">
-              {patient.firstName} {patient.lastName}
-            </h3>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-gray-600">
-            <div>
-              <span className="text-gray-500">Date of birth</span>{' '}
-              <span className="font-medium text-gray-800">{dobDisplay}</span>
-            </div>
-            <div>
-              <span className="text-gray-500">NHS number</span>{' '}
-              <span className="font-medium text-gray-800">{patient.nhsNumber || '—'}</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Phone</span>{' '}
-              <span className="font-medium text-gray-800">{patient.phoneNumber || '—'}</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Registered</span>{' '}
-              <span className="font-medium text-gray-800">{patient.registeredDate || '—'}</span>
-            </div>
-          </div>
-
-          {formattedAddress && (
-            <p className="text-sm text-gray-500 pt-0.5">{formattedAddress}</p>
-          )}
-        </div>
+        <p className="address">{patientAddress(patient)}</p>
       </div>
-
-      {/* Action label stays visible while the full card is the button. */}
-      <div className="self-end md:self-center shrink-0">
-        <span className="inline-flex items-center gap-2 bg-[#00695c] text-white text-sm font-medium px-4 py-2 rounded-md shadow-xs">
-          <UserCheck className="w-4 h-4" />
-          <span>Open Profile</span>
-        </span>
+      <div className="patient-actions">
+        <button
+          type="button"
+          className="button primary"
+          aria-label={`Record Visit: ${name}`}
+          aria-haspopup="dialog"
+          onClick={() => onRecordVisit(patient)}
+        >
+          <Icon name="calendar" />
+          Record Visit
+        </button>
+        <details className="patient-menu" ref={menuRef}>
+          <summary className="icon-button" aria-label={`More actions: ${name}`}>
+            <Icon name="more-horizontal" />
+          </summary>
+          <div className="patient-menu-content">
+            <button
+              type="button"
+              className="patient-menu-item"
+              aria-label={`Add Prescription: ${name}`}
+              aria-haspopup="dialog"
+              onClick={fromMenu(onAddPrescription)}
+            >
+              <Icon name="file-plus" />
+              Add Prescription
+            </button>
+            <button
+              type="button"
+              className="patient-menu-item"
+              aria-label={`Edit Patient: ${name}`}
+              aria-haspopup="dialog"
+              onClick={fromMenu(onEditPatient)}
+            >
+              <Icon name="edit-2" />
+              Edit Patient
+            </button>
+          </div>
+        </details>
       </div>
-    </div>
+    </article>
   );
 };

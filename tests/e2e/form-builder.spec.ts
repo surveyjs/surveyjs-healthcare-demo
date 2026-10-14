@@ -13,7 +13,7 @@ test.beforeEach(async ({ page, request }) => {
 });
 
 test('a customized schema stored in SQLite is rendered instead of the default', async ({ page, request }) => {
-  // Simulate a Survey Creator save: customize the search form's last name title
+  // Simulate a Survey Creator save: customize the search form's name title
   const customized = JSON.parse(JSON.stringify(patientSearchSchema));
   customized.pages[0].elements[0].title = 'Surname (customized)';
   const put = await request.put('/api/forms/patient-search', { data: customized });
@@ -32,19 +32,18 @@ test('saving a form in the Survey Creator persists the schema to SQLite', async 
   await page.goto('/');
   await page.getByRole('link', { name: 'Inpatient Settings' }).click();
 
-  // Open the builder for the first form (Patient Registration)
-  await page.getByRole('button', { name: 'Edit in Builder' }).first().click();
-  await expect(page.getByText('Form Builder:').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Edit in Builder: Patient Registration Form' }).click();
+  const builder = page.getByRole('dialog', { name: 'Form Builder: Patient Registration Form' });
+  await expect(builder).toBeVisible();
 
-  // Wait for the creator to finish loading, then save
-  const saveButton = page.getByRole('button', { name: 'Save & Apply Form' });
+  const saveButton = builder.getByRole('button', { name: 'Save & Apply Form' });
   await expect(saveButton).toBeVisible();
   await saveButton.click();
 
   // Save & Apply closes the creator and returns to the originating view
-  await expect(page.getByText('Form Builder:')).toHaveCount(0);
-  await expect(page.getByText('Schema Saved')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Edit in Builder' }).first()).toBeVisible();
+  await expect(builder).toBeHidden();
+  await expect(page.getByRole('status').filter({ hasText: 'Form saved.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit in Builder: Patient Registration Form' })).toBeFocused();
 
   // The override is now stored in the database
   const forms = await (await request.get('/api/forms')).json();
@@ -52,34 +51,35 @@ test('saving a form in the Survey Creator persists the schema to SQLite', async 
   expect(forms['patient-registration'].pages?.length).toBeGreaterThan(0);
 });
 
-test('Save & Apply from a modal-opened builder closes the creator and reopens the modal', async ({ page, request }) => {
-  await page.goto('/');
+test('the search form header opens its schema in the builder', async ({ page }) => {
+  await page.goto('/manage');
+  await page.getByRole('button', { name: 'Edit Search Form' }).click();
+  const builder = page.getByRole('dialog', { name: 'Form Builder: Search for a Patient Form' });
+  await expect(builder).toBeVisible();
+  await builder.getByRole('button', { name: 'Close Form Builder' }).click();
+  await expect(builder).toBeHidden();
+});
 
-  // Open Emma Thompson's profile and the Add New Visit modal
-  await page
-    .locator('div')
-    .filter({ has: page.getByRole('heading', { name: 'Emma Thompson' }) })
-    .getByRole('button', { name: 'Open Profile' })
-    .first()
-    .click();
-  await page.getByRole('button', { name: 'Add New Visit' }).click();
-  await expect(page.getByRole('heading', { name: 'Add New Visit' })).toBeVisible();
+test('Save & Apply from a dialog-opened builder closes the creator and reopens the dialog', async ({ page, request }) => {
+  await page.goto('/patients/p-emma-thompson');
 
-  // Jump into the builder from inside the modal; the modal closes
-  await page.getByRole('button', { name: 'Customize Patient Visit Form' }).click();
-  await expect(page.getByText('Form Builder:').first()).toBeVisible();
-  // The creator's design surface shows the schema title, so assert on the modal's footer button
-  await expect(page.getByRole('button', { name: 'Save Visit' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Record Visit' }).first().click();
+  const visitDialog = page.getByRole('dialog', { name: 'Record Visit — Emma Thompson' });
+  await expect(visitDialog).toBeVisible();
 
-  const saveButton = page.getByRole('button', { name: 'Save & Apply Form' });
-  await expect(saveButton).toBeVisible();
-  await saveButton.click();
+  // Jump into the builder from inside the dialog; the dialog closes
+  await visitDialog.getByRole('button', { name: 'Edit Visit Form' }).click();
+  const builder = page.getByRole('dialog', { name: 'Form Builder: Add New Visit Form' });
+  await expect(builder).toBeVisible();
+  await expect(visitDialog).toBeHidden();
 
-  // The creator closes and the Add New Visit modal reopens showing the just-edited form
-  await expect(page.getByText('Form Builder:')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Add New Visit' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save Visit' })).toBeVisible();
-  await expect(page.getByRole('textbox', { name: 'Visit Date' })).toBeVisible();
+  await builder.getByRole('button', { name: 'Save & Apply Form' }).click();
+
+  // The creator closes and the visit dialog reopens showing the just-edited form
+  await expect(builder).toBeHidden();
+  await expect(visitDialog).toBeVisible();
+  await expect(visitDialog.getByRole('button', { name: 'Save Visit' })).toBeVisible();
+  await expect(visitDialog.getByRole('textbox', { name: 'Visit Date' })).toBeVisible();
 
   // The schema override was persisted
   const forms = await (await request.get('/api/forms')).json();

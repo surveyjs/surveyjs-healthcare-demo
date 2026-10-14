@@ -525,7 +525,7 @@ export function createDb(dbPath: string) {
         username: row.username,
         fullName: row.full_name,
         role: row.role,
-        label: `${row.full_name} (${row.role === 'doctor' ? 'Doctor' : 'Patient'})`,
+        label: `${row.full_name} — ${row.role === 'doctor' ? 'Doctor' : 'Patient'}`,
       }));
     },
 
