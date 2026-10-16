@@ -12,8 +12,7 @@
           "title": "Patient name",
           "placeholder": "First name, last name, or both",
           "width": "33.333%",
-          "minWidth": "200px",
-          "autocomplete": "off"
+          "minWidth": "200px"
         },
         {
           "type": "text",
@@ -32,8 +31,7 @@
           "title": "NHS Number",
           "placeholder": "Full or partial number",
           "width": "33.333%",
-          "minWidth": "200px",
-          "autocomplete": "off"
+          "minWidth": "200px"
         }
       ]
     }

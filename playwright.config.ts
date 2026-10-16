@@ -16,7 +16,8 @@ export default defineConfig({
     {
       command: 'npx tsx server/index.ts',
       url: `http://localhost:${API_PORT}/api/health`,
-      env: { DB_PATH: '.tmp/e2e.db', API_PORT: String(API_PORT) },
+      // Specs reset data through a separate request context, so they share one database
+      env: { DB_PATH: '.tmp/e2e.db', API_PORT: String(API_PORT), DEMO_SANDBOX: 'off' },
       reuseExistingServer: false,
       timeout: 30_000,
     },

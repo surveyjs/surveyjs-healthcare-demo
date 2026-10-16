@@ -10,6 +10,7 @@ import { FormId } from '../../types/forms';
 import { Patient, Prescription, Visit } from '../../types/patient';
 import { editFormAction, useFormSchema } from '../../ui/components';
 import { fullName, patientContext, todayIso } from '../../ui/format';
+import { openPdfPreview } from '../../utils/prescriptionPdf';
 
 export type PatientDialog =
   | { kind: 'edit-patient'; patient: Patient }
@@ -158,22 +159,20 @@ export const PatientDialogs: React.FC<PatientDialogsProps> = ({ dialog, onClose,
       const data = prescription
         ? patientRepository.mapPrescriptionToSurveyData(prescription)
         : { start_date: todayIso(), frequency: 'once_daily', unit: 'tablets', question1: '1' };
-      const previewAndPrint = async () => {
+      const previewAndPrint = () => {
         const model = prescriptionModel.current;
         if (!model) return;
-        try {
-          const pdf = new SurveyPDF(prescriptionSchema);
-          pdf.data = model.data;
-          const recordName = prescription?.medication || model.data.medication || 'prescription';
-          const fileName =
-            `${patient.lastName}-${recordName}`
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, '-')
-              .replace(/^-|-$/g, '') + '.pdf';
-          await pdf.save(fileName);
-        } catch (error) {
-          console.error('Failed to export prescription PDF:', error);
-        }
+        // Opened before any await so the browser treats it as part of the click
+        const tab = window.open('', '_blank');
+        const pdf = new SurveyPDF(prescriptionSchema);
+        pdf.data = model.data;
+        const recordName = prescription?.medication || model.data.medication || 'prescription';
+        const fileName =
+          `${patient.lastName}-${recordName}`
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '') + '.pdf';
+        openPdfPreview(pdf, tab, fileName).catch((error) => console.error('Failed to export prescription PDF:', error));
       };
       return (
         <FormDialog
@@ -183,7 +182,7 @@ export const PatientDialogs: React.FC<PatientDialogsProps> = ({ dialog, onClose,
           description={patientContext(patient)}
           data={data}
           actions={[
-            { id: 'preview-print', title: 'Preview and Print', css: 'clinic-clear', action: () => void previewAndPrint() },
+            { id: 'preview-print', title: 'Preview and Print', css: 'clinic-clear', action: previewAndPrint },
             ...builderAction('add-new-prescription', 'Edit Prescription Form'),
           ]}
           onModelReady={(model) => (prescriptionModel.current = model)}

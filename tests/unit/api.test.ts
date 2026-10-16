@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { createDb, HealthcareDb } from '../../server/db';
 import { createApp } from '../../server/app';
+import { createSessionStore, SessionStore, SESSION_COOKIE } from '../../server/sessions';
 import { INITIAL_PATIENTS, INITIAL_USERS, DEMO_PASSWORD } from '../../src/data/initialData';
 
 let db: HealthcareDb;
@@ -354,5 +355,119 @@ describe('auth API', () => {
   it('POST /api/auth/login validates the request body', async () => {
     const res = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username: 'x' }) });
     expect(res.status).toBe(400);
+  });
+});
+
+describe('sandboxed API (one database per visitor)', () => {
+  let store: SessionStore;
+  let sandboxServer: Server;
+  let sandboxUrl: string;
+
+  beforeAll(async () => {
+    store = createSessionStore({ createDb: () => createDb(':memory:') });
+    sandboxServer = createApp(store).listen(0);
+    await new Promise<void>((resolve) => sandboxServer.once('listening', () => resolve()));
+    sandboxUrl = `http://127.0.0.1:${(sandboxServer.address() as AddressInfo).port}`;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve) => sandboxServer.close(() => resolve()));
+    store.closeAll();
+  });
+
+  /** Starts a visitor: the first request issues the session cookie, later ones send it back. */
+  async function visitor() {
+    const res = await fetch(`${sandboxUrl}/api/forms`);
+    const setCookie = res.headers.get('set-cookie') ?? '';
+    expect(setCookie).toMatch(new RegExp(`^${SESSION_COOKIE}=[0-9a-f-]{36};`));
+    const cookie = setCookie.split(';')[0];
+    return (path: string, init?: RequestInit) =>
+      fetch(`${sandboxUrl}/api${path}`, {
+        ...init,
+        headers: { 'Content-Type': 'application/json', Cookie: cookie, ...(init?.headers ?? {}) },
+      });
+  }
+
+  it('issues an HttpOnly session cookie once', async () => {
+    const res = await fetch(`${sandboxUrl}/api/forms`);
+    expect(res.headers.get('set-cookie')).toMatch(/HttpOnly/i);
+    const cookie = res.headers.get('set-cookie')!.split(';')[0];
+    const again = await fetch(`${sandboxUrl}/api/forms`, { headers: { Cookie: cookie } });
+    expect(again.headers.get('set-cookie')).toBeNull();
+  });
+
+  it('keeps form customizations private to the visitor who saved them', async () => {
+    const a = await visitor();
+    const b = await visitor();
+    const put = await a('/forms/patient-search', { method: 'PUT', body: JSON.stringify({ title: 'Inappropriate' }) });
+    expect(put.status).toBe(200);
+    expect(await (await a('/forms')).json()).toHaveProperty('patient-search');
+    expect(await (await b('/forms')).json()).toEqual({});
+  });
+
+  it('keeps patient records private to the visitor who created them', async () => {
+    const a = await visitor();
+    const b = await visitor();
+    const created = await a('/patients', {
+      method: 'POST',
+      body: JSON.stringify({
+        firstName: 'Sandbox',
+        lastName: 'Only',
+        dateOfBirth: '1999-09-09',
+        gender: 'other',
+        address: {},
+        emergencyContact: {},
+        visits: [],
+        prescriptions: [],
+      }),
+    });
+    expect(created.status).toBe(201);
+    const names = (list: { lastName: string }[]) => list.map((p) => p.lastName);
+    expect(names(await (await a('/patients')).json())).toContain('Only');
+    expect(names(await (await b('/patients')).json())).not.toContain('Only');
+  });
+
+  it('resets only the calling visitor', async () => {
+    const a = await visitor();
+    const b = await visitor();
+    await b('/forms/patient-search', { method: 'PUT', body: JSON.stringify({ title: 'Kept' }) });
+    await a('/admin/reset', { method: 'POST' });
+    expect(await (await b('/forms')).json()).toHaveProperty('patient-search');
+  });
+
+  it('answers health checks without creating a sandbox', async () => {
+    const before = store.size();
+    const res = await fetch(`${sandboxUrl}/api/health`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('set-cookie')).toBeNull();
+    expect(store.size()).toBe(before);
+  });
+
+  it('replaces a malformed session cookie', async () => {
+    const res = await fetch(`${sandboxUrl}/api/forms`, { headers: { Cookie: `${SESSION_COOKIE}=../../etc` } });
+    expect(res.headers.get('set-cookie')).toMatch(new RegExp(`^${SESSION_COOKIE}=[0-9a-f-]{36};`));
+  });
+});
+
+describe('sandbox storage limit', () => {
+  it('rejects writes beyond the per-visitor storage cap instead of growing memory', async () => {
+    const store = createSessionStore({ createDb: () => createDb(':memory:', { maxBytes: 1024 * 1024 }) });
+    const server = createApp(store).listen(0);
+    await new Promise<void>((resolve) => server.once('listening', () => resolve()));
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api`;
+    try {
+      const first = await fetch(`${url}/forms`);
+      const cookie = first.headers.get('set-cookie')!.split(';')[0];
+      const headers = { 'Content-Type': 'application/json', Cookie: cookie };
+      const huge = JSON.stringify({ title: 'x'.repeat(1_500_000) });
+      const put = await fetch(`${url}/forms/patient-search`, { method: 'PUT', headers, body: huge });
+      expect(put.status).toBe(507);
+      expect((await put.json()).error).toMatch(/storage limit/i);
+      // The sandbox keeps working after the rejected write
+      expect((await fetch(`${url}/forms`, { headers })).status).toBe(200);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      store.closeAll();
+    }
   });
 });

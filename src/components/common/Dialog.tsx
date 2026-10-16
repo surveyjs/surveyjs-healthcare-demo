@@ -56,17 +56,24 @@ interface ModalProps {
   children: React.ReactNode;
 }
 
-/** Dialog with the standard heading, close button, body and optional footer. */
+/**
+ * Dialog with the standard heading, close button, body and optional footer.
+ * The header and footer stay pinned; only the body scrolls. A form body is a
+ * bounded flex host, so the SurveyJS form fits it (`fitToContainer`) and
+ * scrolls with its own scroller instead of the dialog's native one.
+ */
 export const Modal: React.FC<ModalProps> = ({ heading, description, form = false, footer, onClose, children }) => (
   <Dialog
     label={heading}
     className={cx(
-      'm-auto max-h-[calc(100dvh-40px)] rounded-xl border border-border shadow-dialog has-[>.demo-dock]:max-h-[calc(100dvh-168px)]',
+      'm-auto max-h-[calc(100dvh-40px)] overflow-hidden rounded-xl border border-border shadow-dialog open:flex open:flex-col has-[>.demo-dock]:max-h-[calc(100dvh-168px)]',
       form ? 'w-190 max-w-[calc(100vw-24px)] md:max-w-[calc(100vw-32px)]' : 'w-130 max-w-[calc(100vw-32px)]',
     )}
     onClose={onClose}
   >
-    <div className={cx('flex justify-between gap-4 border-b border-border p-5 sm:px-6 sm:py-5.5', form && 'items-center')}>
+    <div
+      className={cx('flex shrink-0 justify-between gap-4 border-b border-border p-5 sm:px-6 sm:py-5.5', form && 'items-center')}
+    >
       <div className="min-w-0">
         <h2 className={cx('leading-normal font-semibold tracking-tight wrap-anywhere', form ? 'text-lg md:text-xl' : 'text-lg')}>
           {heading}
@@ -77,7 +84,14 @@ export const Modal: React.FC<ModalProps> = ({ heading, description, form = false
         <Icon name="x" />
       </button>
     </div>
-    <div className={form ? '' : 'p-5 text-sm leading-[1.8] text-muted-foreground sm:p-6'}>{children}</div>
-    {footer && <div className="flex justify-end gap-2.5 border-t border-border px-5 py-4 sm:px-6">{footer}</div>}
+    <div
+      className={cx(
+        'min-h-0 flex-1',
+        form ? 'modal-form-body flex flex-col' : 'overflow-y-auto p-5 text-sm leading-[1.8] text-muted-foreground sm:p-6',
+      )}
+    >
+      {children}
+    </div>
+    {footer && <div className="flex shrink-0 justify-end gap-2.5 border-t border-border px-5 py-4 sm:px-6">{footer}</div>}
   </Dialog>
 );

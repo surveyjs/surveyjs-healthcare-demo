@@ -109,7 +109,7 @@
           "templateTitle": "{panel.visit_type}  — {panel.visit_date}",
           "allowRemovePanel": false,
           "panelCount": 1,
-          "panelsState": "firstExpanded",
+          "panelsState": "default",
           "addPanelText": "Add New Visit"
         }
       ]

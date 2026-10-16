@@ -225,6 +225,47 @@
   width: auto;
 }
 
+/* Forms inside modal dialogs: the dialog body is a bounded flex host, so the
+   form fits it (SurveyJS `fitToContainer`) and scrolls with SurveyJS's own
+   scroller. Short forms keep their content height. From the sm breakpoint the
+   footer actions stay pinned to the bottom while the questions scroll beneath
+   them; on phones the stacked actions would leave no room, so they scroll. */
+.modal-form-body > .native-survey {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.modal-form-body .sd-root-modern--full-container {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: auto;
+  min-height: 0;
+  & > .sv-scroll__wrapper {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+}
+@variant sm {
+  /* Focused fields scroll clear of the pinned footer (~88px tall), not beneath it. */
+  .modal-form-body .sv-scroll__scroller:has(.sd-body__navigation) {
+    scroll-padding-bottom: 104px;
+  }
+  .modal-form-body .sd-body:has(> .sv-components-container-contentBottom .sd-body__navigation) {
+    padding-bottom: 0;
+  }
+  .modal-form-body .sv-components-container-contentBottom:has(.sd-body__navigation) {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    padding-block: 16px var(--clinic-form-inset);
+    background: var(--color-card);
+    box-shadow: 0 -1px 0 var(--color-border);
+  }
+}
+
 /* Demo dock "SurveyJS blocks": outlines every element SurveyJS renders. */
 [data-survey-component] {
   position: relative;

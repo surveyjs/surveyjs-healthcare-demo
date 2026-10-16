@@ -103,7 +103,12 @@ export interface PatientSearchQuery {
 
 export type HealthcareDb = ReturnType<typeof createDb>;
 
-export function createDb(dbPath: string) {
+export interface CreateDbOptions {
+  /** Upper bound on the database size; writes beyond it fail with SQLITE_FULL. */
+  maxBytes?: number;
+}
+
+export function createDb(dbPath: string, { maxBytes }: CreateDbOptions = {}) {
   if (dbPath !== ':memory:') {
     fs.mkdirSync(path.dirname(path.resolve(dbPath)), { recursive: true });
   }
@@ -112,6 +117,10 @@ export function createDb(dbPath: string) {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA_SQL);
+  if (maxBytes) {
+    const pageSize = db.pragma('page_size', { simple: true }) as number;
+    db.pragma(`max_page_count = ${Math.max(1, Math.floor(maxBytes / pageSize))}`);
+  }
 
   const insertPatientStmt = db.prepare(`
     INSERT INTO patients (

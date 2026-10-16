@@ -287,15 +287,15 @@ test('doctors can edit active prescriptions and completed prescriptions stay rea
   await expect(page.getByRole('textbox', { name: 'Instructions' })).toHaveValue('Take with breakfast.');
 });
 
-test('prescription form exports the current values as a PDF download', async ({ page }) => {
+test('Preview and Print opens the prescription PDF in a new tab', async ({ page }) => {
   await openEmmaProfile(page);
   await page.getByRole('button', { name: 'Add Prescription' }).first().click();
   await page.getByRole('textbox', { name: 'Medication' }).fill('Paracetamol 500mg Tablets');
 
-  const downloadPromise = page.waitForEvent('download');
+  const popupPromise = page.context().waitForEvent('page');
   await page.getByRole('button', { name: 'Preview and Print' }).click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/thompson-paracetamol-500mg-tablets\.pdf/);
+  const popup = await popupPromise;
+  await expect.poll(() => popup.url()).toMatch(/^blob:/);
 });
 
 test('visit dialog defaults the practitioner to the signed-in doctor and never flashes the completion page', async ({
@@ -326,4 +326,56 @@ test('visit dialog defaults the practitioner to the signed-in doctor and never f
 
   await expect(page.getByText('Completion flash check').first()).toBeVisible();
   await expect(page.getByText('Practitioner: Dr. Sarah Miller').first()).toBeVisible();
+});
+
+test.describe('form dialog layout', () => {
+  test('form dialogs keep their header and footer pinned while SurveyJS scrolls the form', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 640 });
+    await openEmmaProfile(page);
+    await page.getByRole('button', { name: 'Record Visit' }).first().click();
+    const dialog = page.getByRole('dialog', { name: /Record Visit — Emma Thompson/ });
+    const heading = dialog.getByRole('heading', { name: /Record Visit — Emma Thompson/ });
+    const save = dialog.getByRole('button', { name: 'Save Visit' });
+    const scroller = dialog.locator('.sv-scroll__scroller').first();
+
+    // The dialog never scrolls natively; SurveyJS's fitToContainer scroller does
+    await expect(heading).toBeInViewport();
+    await expect(save).toBeInViewport();
+    expect(await dialog.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
+    expect(await scroller.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+
+    await scroller.evaluate((el) => (el.scrollTop = el.scrollHeight));
+    await expect(heading).toBeInViewport();
+    await expect(save).toBeInViewport();
+    expect(await dialog.evaluate((el) => el.scrollTop)).toBe(0);
+  });
+
+  test('a focused field is never hidden behind the pinned footer', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 640 });
+    await openEmmaProfile(page);
+    await page.getByRole('button', { name: 'Record Visit' }).first().click();
+    const dialog = page.getByRole('dialog', { name: /Record Visit — Emma Thompson/ });
+    await expect(dialog.getByRole('button', { name: 'Save Visit' })).toBeInViewport();
+
+    // Each field below the fold is scrolled clear of the footer when it receives focus
+    for (const name of ['Reason for Visit', 'Diagnosis']) {
+      const field = dialog.getByRole('textbox', { name, exact: true });
+      await field.focus();
+      const uncovered = await field.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.bottom - 2);
+        return !!hit && (hit === el || el.contains(hit));
+      });
+      expect(uncovered, `${name} is covered by the footer`).toBe(true);
+    }
+  });
+
+  test('short form dialogs stay content-height', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 1400 });
+    await page.goto('/medications');
+    await page.getByRole('button', { name: 'View Medication Record' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Medication Record' });
+    await expect(dialog.getByRole('textbox', { name: 'Medication', exact: true })).toBeVisible();
+    expect(await dialog.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThan(1400 - 40);
+  });
 });

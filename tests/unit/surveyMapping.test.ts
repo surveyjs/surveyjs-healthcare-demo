@@ -228,6 +228,7 @@ describe('mapSurveyToPrescription', () => {
     expect(rx.status).toBe('Completed');
   });
 
+  // Display mode does not run the schema's status expression, so the record carries the domain status
   it('maps a prescription collection to the dynamic panel schema shape', () => {
     expect(mapPrescriptionsToSurveyData([{
       id: 'rx-1',
@@ -248,6 +249,7 @@ describe('mapSurveyToPrescription', () => {
         start_date: '2024-01-15',
         end_date: '',
         instructions: 'Take each morning.',
+        status: 'Active',
       }],
     });
   });

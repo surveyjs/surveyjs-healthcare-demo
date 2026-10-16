@@ -33,6 +33,13 @@ test('manage patients screen lists all patients from the SQLite database', async
   ).toBeVisible();
 });
 
+test('patient search inputs opt out of browser autofill without an invalid schema value', async ({ page }) => {
+  await page.goto('/manage');
+  const search = page.locator('#survey-search');
+  await expect(search.getByRole('textbox', { name: 'Patient name' })).toHaveAttribute('autocomplete', 'off');
+  await expect(search.getByRole('textbox', { name: 'NHS Number' })).toHaveAttribute('autocomplete', 'off');
+});
+
 test('patient profile shows visits and prescriptions loaded from the database', async ({ page }) => {
   await page.goto('/patients/p-emma-thompson');
 
@@ -56,6 +63,8 @@ test('patient profile shows visits and prescriptions loaded from the database', 
   const dialog = page.getByRole('dialog', { name: 'Visit Details' });
   await expect(dialog.getByLabel('Visit Date')).toBeVisible();
   await expect(dialog.getByRole('textbox', { name: 'Diagnosis' })).toHaveValue('Tension headache');
+  // Read-only records are always expanded: no collapse toggle on the panel
+  await expect(dialog.locator('.sd-element__title--expandable')).toHaveCount(0);
   await dialog.getByRole('button', { name: 'Close dialog' }).click();
   await expect(dialog).toBeHidden();
 });
@@ -107,6 +116,8 @@ test('medications registry filters, sorts, clears filters, and exposes row actio
   await expect(recordDialog).toBeVisible();
   await expect(recordDialog.getByRole('textbox', { name: 'Medication', exact: true })).toHaveValue('Amlodipine 5mg Tablets');
   await expect(recordDialog.getByText('Once daily', { exact: true })).toBeVisible();
+  await expect(recordDialog.locator('.sd-element__title--expandable')).toHaveCount(0);
+  await expect(recordDialog.getByText('Amlodipine 5mg Tablets — Active')).toBeVisible();
   await recordDialog.getByRole('button', { name: 'Close dialog' }).click();
   await expect(recordDialog).toBeHidden();
 });

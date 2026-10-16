@@ -232,5 +232,11 @@ export function mapPrescriptionToSurveyData(prescription: Prescription): Record<
 }
 
 export function mapPrescriptionsToSurveyData(prescriptions: Prescription[]): Record<string, any> {
-  return { medications: prescriptions.map(mapPrescriptionToSurveyData) };
+  // Read-only records render in display mode, which does not run the schema's status expression.
+  return {
+    medications: prescriptions.map((prescription) => ({
+      ...mapPrescriptionToSurveyData(prescription),
+      status: prescription.status,
+    })),
+  };
 }

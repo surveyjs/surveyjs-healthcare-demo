@@ -117,13 +117,13 @@
               "type": "expression",
               "name": "status",
               "visible": false,
-              "expression": "iif({panel.end_date} empty, '', iif({panel.end_date} >= today(), 'Active', 'Completed'))"
+              "expression": "iif({panel.end_date} empty, 'Active', iif({panel.end_date} >= today(), 'Active', 'Completed'))"
             }
           ],
           "templateTitle": "{panel.medication} — {panel.status}",
           "allowRemovePanel": false,
           "panelCount": 1,
-          "panelsState": "firstExpanded",
+          "panelsState": "default",
           "addPanelText": "Add Medication"
         }
       ]

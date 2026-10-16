@@ -131,6 +131,10 @@ export const ManagePatientsPage: React.FC<ManagePatientsPageProps> = ({ onOpenFo
           configure={(model) => {
             model.textUpdateMode = 'onTyping';
             model.showCompleteButton = false;
+            // The schema's `autocomplete` only accepts autofill tokens, so browser history is turned off here.
+            model.onAfterRenderQuestion.add((_, { htmlElement }) =>
+              htmlElement.querySelectorAll('input').forEach((input) => input.setAttribute('autocomplete', 'off')),
+            );
             const toolbar = new ActionContainer();
             toolbar.setActionsAppearance({ mode: 'tertiary-surface', size: 'large', style: 'brand', showBorder: true });
             toolbar.cssClasses = { ...model.navigationBar.cssClasses, root: 'sd-action-bar search-header-actions' };

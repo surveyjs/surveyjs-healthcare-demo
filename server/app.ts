@@ -1,16 +1,32 @@
-import express, { Express } from 'express';
+import express, { Express, NextFunction, Request, Response } from 'express';
 import { HealthcareDb } from './db';
+import { SessionStore, sessionMiddleware } from './sessions';
 
-export function createApp(db: HealthcareDb): Express {
+/** The database of the visitor making the request. */
+const dbOf = (res: Response): HealthcareDb => res.locals.db;
+
+/**
+ * A single database is shared by every client (tests, `DEMO_SANDBOX=off`);
+ * a session store gives each visitor their own database.
+ */
+export function createApp(source: HealthcareDb | SessionStore): Express {
   const app = express();
   app.use(express.json({ limit: '2mb' }));
-
+  // Before the session middleware: health probes never create a visitor sandbox.
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
   });
+  if ('closeAll' in source) {
+    app.use('/api', sessionMiddleware(source));
+  } else {
+    app.use((_req, res, next) => {
+      res.locals.db = source;
+      next();
+    });
+  }
 
   app.get('/api/auth/roster', (_req, res) => {
-    res.json(db.listUserRoster());
+    res.json(dbOf(res).listUserRoster());
   });
 
   app.post('/api/auth/login', (req, res) => {
@@ -19,7 +35,7 @@ export function createApp(db: HealthcareDb): Express {
       res.status(400).json({ error: 'username and password are required' });
       return;
     }
-    const user = db.authenticateUser(body.username, body.password);
+    const user = dbOf(res).authenticateUser(body.username, body.password);
     if (!user) {
       res.status(401).json({ error: 'Invalid username or password' });
       return;
@@ -28,7 +44,7 @@ export function createApp(db: HealthcareDb): Express {
   });
 
   app.get('/api/appointment-requests', (_req, res) => {
-    res.json(db.listAppointmentRequests());
+    res.json(dbOf(res).listAppointmentRequests());
   });
 
   app.post('/api/appointment-requests', (req, res) => {
@@ -45,7 +61,7 @@ export function createApp(db: HealthcareDb): Express {
       return;
     }
 
-    const request = db.createAppointmentRequest(body.patientId, body.requestData);
+    const request = dbOf(res).createAppointmentRequest(body.patientId, body.requestData);
     if (!request) {
       res.status(404).json({ error: 'Patient not found' });
       return;
@@ -55,7 +71,7 @@ export function createApp(db: HealthcareDb): Express {
 
   app.get('/api/patients', (req, res) => {
     const { lastName, dateOfBirth, nhsNumber } = req.query;
-    const patients = db.listPatients({
+    const patients = dbOf(res).listPatients({
       lastName: typeof lastName === 'string' ? lastName : undefined,
       dateOfBirth: typeof dateOfBirth === 'string' ? dateOfBirth : undefined,
       nhsNumber: typeof nhsNumber === 'string' ? nhsNumber : undefined,
@@ -64,7 +80,7 @@ export function createApp(db: HealthcareDb): Express {
   });
 
   app.get('/api/patients/:id', (req, res) => {
-    const patient = db.getPatient(req.params.id);
+    const patient = dbOf(res).getPatient(req.params.id);
     if (!patient) {
       res.status(404).json({ error: 'Patient not found' });
       return;
@@ -78,7 +94,7 @@ export function createApp(db: HealthcareDb): Express {
       res.status(400).json({ error: 'firstName and lastName are required' });
       return;
     }
-    const created = db.createPatient(body);
+    const created = dbOf(res).createPatient(body);
     res.status(201).json(created);
   });
 
@@ -88,7 +104,7 @@ export function createApp(db: HealthcareDb): Express {
       res.status(400).json({ error: 'firstName and lastName are required' });
       return;
     }
-    const updated = db.updatePatient(req.params.id, body);
+    const updated = dbOf(res).updatePatient(req.params.id, body);
     if (!updated) {
       res.status(404).json({ error: 'Patient not found' });
       return;
@@ -102,12 +118,12 @@ export function createApp(db: HealthcareDb): Express {
       res.status(400).json({ error: 'Visit body is required' });
       return;
     }
-    const visit = db.addVisit(req.params.id, body);
+    const visit = dbOf(res).addVisit(req.params.id, body);
     if (!visit) {
       res.status(404).json({ error: 'Patient not found' });
       return;
     }
-    res.status(201).json({ visit, patient: db.getPatient(req.params.id) });
+    res.status(201).json({ visit, patient: dbOf(res).getPatient(req.params.id) });
   });
 
   app.put('/api/patients/:id/visits/:visitId', (req, res) => {
@@ -117,7 +133,7 @@ export function createApp(db: HealthcareDb): Express {
       return;
     }
 
-    const patient = db.getPatient(req.params.id);
+    const patient = dbOf(res).getPatient(req.params.id);
     const existingVisit = patient?.visits.find((visit) => visit.id === req.params.visitId);
     if (!existingVisit) {
       res.status(404).json({ error: 'Visit not found' });
@@ -131,21 +147,21 @@ export function createApp(db: HealthcareDb): Express {
       return;
     }
 
-    const visit = db.updateVisit(req.params.id, req.params.visitId, body);
+    const visit = dbOf(res).updateVisit(req.params.id, req.params.visitId, body);
     if (!visit) {
       res.status(404).json({ error: 'Visit not found or no longer editable' });
       return;
     }
-    res.json({ visit, patient: db.getPatient(req.params.id) });
+    res.json({ visit, patient: dbOf(res).getPatient(req.params.id) });
   });
 
   app.delete('/api/patients/:id/visits/:visitId', (req, res) => {
-    const removed = db.removeVisit(req.params.id, req.params.visitId);
+    const removed = dbOf(res).removeVisit(req.params.id, req.params.visitId);
     if (!removed) {
       res.status(404).json({ error: 'Visit not found' });
       return;
     }
-    res.json({ status: 'deleted', patient: db.getPatient(req.params.id) });
+    res.json({ status: 'deleted', patient: dbOf(res).getPatient(req.params.id) });
   });
 
   app.post('/api/patients/:id/prescriptions', (req, res) => {
@@ -154,12 +170,12 @@ export function createApp(db: HealthcareDb): Express {
       res.status(400).json({ error: 'medication is required' });
       return;
     }
-    const prescription = db.addPrescription(req.params.id, body);
+    const prescription = dbOf(res).addPrescription(req.params.id, body);
     if (!prescription) {
       res.status(404).json({ error: 'Patient not found' });
       return;
     }
-    res.status(201).json({ prescription, patient: db.getPatient(req.params.id) });
+    res.status(201).json({ prescription, patient: dbOf(res).getPatient(req.params.id) });
   });
 
   app.put('/api/patients/:id/prescriptions/:prescriptionId', (req, res) => {
@@ -169,7 +185,7 @@ export function createApp(db: HealthcareDb): Express {
       return;
     }
 
-    const patient = db.getPatient(req.params.id);
+    const patient = dbOf(res).getPatient(req.params.id);
     const existingPrescription = patient?.prescriptions.find(
       (prescription) => prescription.id === req.params.prescriptionId,
     );
@@ -182,21 +198,21 @@ export function createApp(db: HealthcareDb): Express {
       return;
     }
 
-    const prescription = db.updatePrescription(req.params.id, req.params.prescriptionId, body);
+    const prescription = dbOf(res).updatePrescription(req.params.id, req.params.prescriptionId, body);
     if (!prescription) {
       res.status(409).json({ error: 'Prescription is no longer editable' });
       return;
     }
-    res.json({ prescription, patient: db.getPatient(req.params.id) });
+    res.json({ prescription, patient: dbOf(res).getPatient(req.params.id) });
   });
 
   app.post('/api/admin/reset', (_req, res) => {
-    db.resetToInitial();
+    dbOf(res).resetToInitial();
     res.json({ status: 'reset' });
   });
 
   app.get('/api/forms', (_req, res) => {
-    res.json(db.listFormSchemas());
+    res.json(dbOf(res).listFormSchemas());
   });
 
   app.put('/api/forms/:id', (req, res) => {
@@ -205,13 +221,22 @@ export function createApp(db: HealthcareDb): Express {
       res.status(400).json({ error: 'A survey schema object is required' });
       return;
     }
-    db.saveFormSchema(req.params.id, schema);
+    dbOf(res).saveFormSchema(req.params.id, schema);
     res.json({ status: 'saved' });
   });
 
   app.delete('/api/forms/:id', (req, res) => {
-    db.deleteFormSchema(req.params.id);
+    dbOf(res).deleteFormSchema(req.params.id);
     res.json({ status: 'deleted' });
+  });
+
+  // A visitor's sandbox is size-capped; a write past the cap is refused rather than growing memory.
+  app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
+    if ((error as { code?: string })?.code === 'SQLITE_FULL') {
+      res.status(507).json({ error: 'Demo storage limit reached. Reset the demo data to continue.' });
+      return;
+    }
+    next(error);
   });
 
   return app;
