@@ -11,6 +11,8 @@ export default defineConfig({
     baseURL: `http://localhost:${WEB_PORT}`,
     // Use the system-installed Chrome (Playwright CDN is unreachable in this environment)
     channel: 'chrome',
+    // Dates render in the browser locale; pin it so assertions like "22/07/1978" stay stable
+    locale: 'en-GB',
   },
   webServer: [
     {

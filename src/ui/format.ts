@@ -8,12 +8,15 @@ export function toIsoDate(value?: string): string {
   return uk ? `${uk[3]}-${uk[2]}-${uk[1]}` : value;
 }
 
-/** Displays a stored date as dd/mm/yyyy; non-date values such as "Ongoing" pass through. */
+/**
+ * Displays a stored date in the browser locale — the same order native date inputs use
+ * (e.g. dd/mm/yyyy in en-GB, mm/dd/yyyy in en-US). Non-date values such as "Ongoing" pass through.
+ */
 export function formatDate(value?: string): string {
   if (!value) return '—';
   const iso = toIsoDate(value);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return value;
-  return new Date(iso + 'T12:00:00').toLocaleDateString('en-GB');
+  return new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 export function todayIso(): string {
