@@ -104,6 +104,30 @@ export function mapPatientToSurveyData(patient: Patient): Record<string, any> {
   };
 }
 
+export type SchemaChoice = string | { value?: string; text?: string };
+
+const normalizeName = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
+
+/** "Dr. Mark Jones" → "dr. jones": the title plus surname form used by the visit form's choices. */
+const titleAndSurname = (name: string) => {
+  const parts = normalizeName(name).split(' ');
+  return parts.length > 2 ? `${parts[0]} ${parts[parts.length - 1]}` : parts.join(' ');
+};
+
+/**
+ * Returns the value of the choice naming the given practitioner. An exact
+ * full-name choice wins; otherwise a "title + surname" choice matches, so
+ * "Dr. Mark Jones" selects "Dr. Jones".
+ */
+export function findPractitionerChoice(choices: SchemaChoice[], fullName: string): string | undefined {
+  const text = (c: SchemaChoice) => (typeof c === 'string' ? c : (c.text ?? c.value ?? ''));
+  const value = (c: SchemaChoice) => (typeof c === 'string' ? c : (c.value ?? ''));
+  const match =
+    choices.find((c) => normalizeName(text(c)) === normalizeName(fullName)) ??
+    choices.find((c) => titleAndSurname(text(c)) === titleAndSurname(fullName));
+  return match ? value(match) : undefined;
+}
+
 export function mapSurveyToVisit(visitData: Record<string, any>): Visit {
   // A "Other" selection stores the practitioner name in the question comment
   const practitionerRaw =

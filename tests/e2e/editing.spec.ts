@@ -328,6 +328,23 @@ test('visit dialog defaults the practitioner to the signed-in doctor and never f
   await expect(page.getByText('Practitioner: Dr. Sarah Miller').first()).toBeVisible();
 });
 
+test('visit dialog selects the listed "Dr. Jones" choice for the signed-in Dr. Mark Jones', async ({ page }) => {
+  // Runs after the beforeEach init script, so this session replaces Dr. Sarah Miller's
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'hc-auth-user',
+      JSON.stringify({ id: 'u-mark-jones', username: 'mark.jones', fullName: 'Dr. Mark Jones', role: 'doctor' }),
+    );
+  });
+  await openEmmaProfile(page);
+
+  await page.getByRole('button', { name: 'Record Visit' }).first().click();
+
+  const practitionerQuestion = page.locator('[data-name="practitioner"]');
+  await expect(practitionerQuestion.locator('.sd-dropdown__input')).toContainText('Dr. Jones');
+  await expect(practitionerQuestion.locator('textarea')).toHaveCount(0);
+});
+
 test.describe('form dialog layout', () => {
   test('form dialogs keep their header and footer pinned while SurveyJS scrolls the form', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 640 });

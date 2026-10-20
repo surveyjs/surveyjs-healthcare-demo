@@ -5,7 +5,12 @@ import { Modal } from '../common/Dialog';
 import { SurveyNavigationAction, SurveyRenderer } from '../../survey/SurveyRenderer';
 import { patientRepository } from '../../repositories/patientRepository';
 import { authRepository } from '../../repositories/authRepository';
-import { mapPrescriptionsToSurveyData, mapVisitsToSurveyData } from '../../repositories/surveyMapping';
+import {
+  findPractitionerChoice,
+  mapPrescriptionsToSurveyData,
+  mapVisitsToSurveyData,
+  SchemaChoice,
+} from '../../repositories/surveyMapping';
 import { FormId } from '../../types/forms';
 import { Patient, Prescription, Visit } from '../../types/patient';
 import { editFormAction, useFormSchema } from '../../ui/components';
@@ -63,12 +68,11 @@ const FormDialog: React.FC<FormDialogProps> = ({
   );
 };
 
-type SchemaChoice = string | { value?: string; text?: string };
 const choiceValue = (c: SchemaChoice) => (typeof c === 'string' ? c : (c.value ?? ''));
-const choiceText = (c: SchemaChoice) => (typeof c === 'string' ? c : (c.text ?? c.value ?? ''));
 
 /**
- * The logged-in doctor is the default practitioner. If they are not among the
+ * The logged-in doctor is the default practitioner, matched by full name or by
+ * title + surname ("Dr. Mark Jones" → "Dr. Jones"). If they are not among the
  * schema's choices, their full name selects the dropdown's "Other" item
  * (SurveyJS moves unlisted values into the comment). Non-doctor contexts fall
  * back to the first choice.
@@ -79,8 +83,7 @@ function getPractitionerDefault(schema: object): string | undefined {
   const choices = question?.choices ?? [];
   const user = authRepository.getStoredUser();
   if (user?.role === 'doctor') {
-    const match = choices.find((c) => choiceText(c) === user.fullName);
-    return match ? choiceValue(match) : user.fullName;
+    return findPractitionerChoice(choices, user.fullName) ?? user.fullName;
   }
   return choices.length > 0 ? choiceValue(choices[0]) : undefined;
 }

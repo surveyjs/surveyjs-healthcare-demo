@@ -9,6 +9,7 @@ import {
   mapSurveyToPrescription,
   mapPrescriptionToSurveyData,
   mapPrescriptionsToSurveyData,
+  findPractitionerChoice,
 } from '../../src/repositories/surveyMapping';
 import { Patient } from '../../src/types/patient';
 
@@ -201,6 +202,35 @@ describe('mapSurveyToVisit', () => {
         practitioner: 'dr_jones',
       }],
     });
+  });
+});
+
+describe('findPractitionerChoice', () => {
+  const choices = [
+    { value: 'dr_smith', text: 'Dr. Smith' },
+    { value: 'dr_jones', text: 'Dr. Jones' },
+    'Dr. Williams',
+  ];
+
+  it('matches a doctor listed by title and surname only', () => {
+    expect(findPractitionerChoice(choices, 'Dr. Mark Jones')).toBe('dr_jones');
+  });
+
+  it('matches plain string choices and ignores case and extra spaces', () => {
+    expect(findPractitionerChoice(choices, '  dr.   ann   WILLIAMS ')).toBe('Dr. Williams');
+  });
+
+  it('prefers an exact full-name choice over a surname match', () => {
+    const withFullName = [...choices, { value: 'mark', text: 'Dr. Mark Jones' }];
+    expect(findPractitionerChoice(withFullName, 'Dr. Mark Jones')).toBe('mark');
+  });
+
+  it('returns undefined when the doctor is not listed', () => {
+    expect(findPractitionerChoice(choices, 'Dr. Sarah Miller')).toBeUndefined();
+  });
+
+  it('does not match a different title with the same surname', () => {
+    expect(findPractitionerChoice(choices, 'Nurse Kate Jones')).toBeUndefined();
   });
 });
 
