@@ -62,6 +62,31 @@ describe('read-only history records', () => {
   });
 });
 
+describe('add-new-visit dates', () => {
+  const followUpErrors = (data: Record<string, string>) => {
+    const model = new Model(schemas['add-new-visit']);
+    model.data = { visit_type: 'consultation', ...data };
+    const question = model.getQuestionByName('follow_up_date');
+    question.validate(true);
+    return question.errors.map((e) => e.getText());
+  };
+
+  it('rejects a follow-up date earlier than the visit date', () => {
+    expect(followUpErrors({ visit_date: '2026-10-19', follow_up_date: '2026-08-05' })).toEqual([
+      'Follow-up date cannot be earlier than the visit date.',
+    ]);
+  });
+
+  it('accepts a follow-up date on or after the visit date', () => {
+    expect(followUpErrors({ visit_date: '2026-10-19', follow_up_date: '2026-10-19' })).toEqual([]);
+    expect(followUpErrors({ visit_date: '2026-10-19', follow_up_date: '2026-11-02' })).toEqual([]);
+  });
+
+  it('keeps the follow-up date optional', () => {
+    expect(followUpErrors({ visit_date: '2026-10-19' })).toEqual([]);
+  });
+});
+
 describe('exported PDF forms', () => {
   it('add-new-prescription is titled "Prescription Form"', () => {
     expect(new Model(schemas['add-new-prescription']).title).toBe('Prescription Form');

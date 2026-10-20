@@ -78,7 +78,9 @@
           "type": "text",
           "name": "follow_up_date",
           "title": "Follow-up Date",
-          "inputType": "date"
+          "inputType": "date",
+          "minValueExpression": "{visit_date}",
+          "minErrorText": "Follow-up date cannot be earlier than the visit date."
         },
         {
           "type": "comment",
