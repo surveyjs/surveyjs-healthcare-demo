@@ -124,17 +124,17 @@ test('medications registry filters, sorts, clears filters, and exposes row actio
 
 test('the demo dock switches to the dark theme and toggles SurveyJS outlines', async ({ page }) => {
   await page.goto('/manage');
-  const dock = page.getByRole('toolbar', { name: 'Demo display options' });
+  const dock = page.getByRole('toolbar', { name: 'Demo Tools' });
   const html = page.locator('html');
   await expect(html).toHaveAttribute('data-theme', 'light');
   await expect(page.locator('.search-panel')).toHaveAttribute('data-survey-component', 'SurveyJS renders this');
 
-  await dock.getByRole('button', { name: 'Switch to dark theme' }).click();
+  await dock.getByRole('button', { name: 'Switch Theme' }).click();
   await expect(html).toHaveAttribute('data-theme', 'dark');
   await page.reload();
   await expect(html).toHaveAttribute('data-theme', 'dark');
 
-  const outlines = dock.getByRole('button', { name: 'Highlight SurveyJS components' });
+  const outlines = dock.getByRole('button', { name: 'Highlight SurveyJS' });
   await expect(outlines).toHaveAttribute('aria-pressed', 'true');
   await outlines.click();
   await expect(outlines).toHaveAttribute('aria-pressed', 'false');

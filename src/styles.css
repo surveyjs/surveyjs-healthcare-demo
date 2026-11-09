@@ -267,6 +267,70 @@
 }
 
 /* Demo dock "SurveyJS blocks": outlines every element SurveyJS renders. */
+.demo-dock-panel {
+  transition: opacity 150ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* The backdrop stays separate from the fading panel to keep blur stable. */
+  .demo-dock::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    backdrop-filter: blur(14px);
+    pointer-events: none;
+  }
+
+  .demo-dock-panel {
+    opacity: 0.75;
+    will-change: opacity;
+  }
+
+  .demo-dock:hover > .demo-dock-panel,
+  .demo-dock:focus-within > .demo-dock-panel {
+    opacity: 1;
+  }
+}
+
+.demo-dock-control {
+  position: relative;
+  display: flex;
+}
+
+.demo-dock-tooltip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  z-index: 1;
+  width: max-content;
+  max-width: min(17rem, calc(100vw - 24px));
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--color-foreground);
+  color: var(--color-card);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.demo-dock-control:hover .demo-dock-tooltip,
+.demo-dock-control:focus-within .demo-dock-tooltip {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 100ms 150ms, visibility 0s 150ms;
+}
+
+.demo-dock[data-tooltips-dismissed] .demo-dock-tooltip {
+  visibility: hidden;
+  opacity: 0;
+  transition: none;
+}
+
 [data-survey-component] {
   position: relative;
   isolation: isolate;
