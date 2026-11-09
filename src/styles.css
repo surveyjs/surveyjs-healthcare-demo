@@ -299,6 +299,23 @@
   display: flex;
 }
 
+.demo-dock-action-label {
+  display: none;
+}
+
+/* Match the shadcn dock's 2xl breakpoint for action labels. */
+@media (min-width: 96rem) {
+  .demo-dock-action {
+    width: auto;
+    gap: 6px;
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+  .demo-dock-action-label {
+    display: inline;
+  }
+}
+
 .demo-dock-menu-trigger {
   width: auto;
   max-width: calc(100vw - 138px);

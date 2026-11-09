@@ -7,7 +7,7 @@ import { applyClinicDisplay, demoDisplay, reapplyClinicThemes, saveDemoDisplay }
 const DOCK_CLASS =
   'demo-dock fixed inset-auto bottom-[calc(16px+env(safe-area-inset-bottom,0px))] left-1/2 z-10000 m-0 w-max max-w-[calc(100vw-24px)] -translate-x-1/2 overflow-visible rounded-full border-0 bg-transparent p-0 text-foreground backdrop:pointer-events-none backdrop:bg-transparent';
 const DOCK_BUTTON_CLASS =
-  'inline-flex size-11 cursor-default items-center justify-center rounded-full text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-1 aria-pressed:bg-muted';
+  'inline-flex size-11 shrink-0 cursor-default items-center justify-center rounded-full text-sm leading-5 font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-1 aria-pressed:bg-muted';
 
 function createDemoTools() {
   const dock = document.createElement('div');
@@ -21,8 +21,8 @@ function createDemoTools() {
   dock.innerHTML =
     '<div class="demo-dock-panel relative flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1.5 shadow-dock">' +
     `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS} demo-dock-menu-trigger" data-demo-menu-trigger aria-label="Healthcare" aria-describedby="demo-menu-tooltip">${iconMarkup('menu', 'size-4.5')}<span>Healthcare</span>${iconMarkup('chevron-down', 'size-3.5 opacity-60')}</button><span role="tooltip" id="demo-menu-tooltip" class="demo-dock-tooltip">Switch Demo</span></span>` +
-    `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS}" data-demo-action="outlines" aria-label="Highlight SurveyJS" aria-describedby="demo-outlines-tooltip"></button><span role="tooltip" id="demo-outlines-tooltip" class="demo-dock-tooltip"></span></span>` +
-    `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS}" data-demo-action="theme" aria-label="Switch Theme" aria-describedby="demo-theme-tooltip"></button><span role="tooltip" id="demo-theme-tooltip" class="demo-dock-tooltip">Switch Theme</span></span></div>`;
+    `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS} demo-dock-action" data-demo-action="outlines" aria-label="Highlight SurveyJS" aria-describedby="demo-outlines-tooltip"></button><span role="tooltip" id="demo-outlines-tooltip" class="demo-dock-tooltip"></span></span>` +
+    `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS} demo-dock-action" data-demo-action="theme" aria-label="Switch Theme" aria-describedby="demo-theme-tooltip"></button><span role="tooltip" id="demo-theme-tooltip" class="demo-dock-tooltip">Switch Theme</span></span></div>`;
   const themeButton = dock.querySelector<HTMLButtonElement>('[data-demo-action="theme"]')!;
   const outlinesButton = dock.querySelector<HTMLButtonElement>('[data-demo-action="outlines"]')!;
   const outlinesTooltip = dock.querySelector<HTMLElement>('#demo-outlines-tooltip')!;
@@ -31,8 +31,8 @@ function createDemoTools() {
 
   function update() {
     const dark = demoDisplay.mode === 'dark';
-    themeButton.innerHTML = iconMarkup(dark ? 'moon' : 'sun', 'size-4.5');
-    outlinesButton.innerHTML = iconMarkup('maximize', 'size-4.5');
+    themeButton.innerHTML = iconMarkup(dark ? 'moon' : 'sun', 'size-4.5') + '<span class="demo-dock-action-label">Switch Theme</span>';
+    outlinesButton.innerHTML = iconMarkup('maximize', 'size-4.5') + '<span class="demo-dock-action-label">Highlight SurveyJS</span>';
     outlinesButton.setAttribute('aria-pressed', String(demoDisplay.outlines));
     outlinesTooltip.textContent = (demoDisplay.outlines ? 'Hide' : 'Show') + ' SurveyJS Outlines';
   }
