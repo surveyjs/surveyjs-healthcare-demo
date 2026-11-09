@@ -81,8 +81,35 @@ function createDemoTools() {
       const parent = element.parentElement;
       // When a card contains only a native form, place its glow on the card so
       // overflow clipping cannot hide the halo behind the SurveyJS surface.
-      const frame = parent?.matches('.panel') && parent.children.length === 1 ? parent : element;
+      const frame =
+        parent?.matches('.panel') &&
+        parent.querySelectorAll(':scope > :not([data-survey-outline-dismiss])').length === 1
+          ? parent
+          : element;
       frame.dataset.surveyComponent = label;
+      if (frame.querySelector(':scope > [data-survey-outline-dismiss]')) return;
+      const dismiss = document.createElement('button');
+      dismiss.type = 'button';
+      dismiss.dataset.surveyOutlineDismiss = '';
+      dismiss.lang = 'en';
+      dismiss.setAttribute('aria-label', `${label}. Hide SurveyJS Outlines`);
+      for (const edge of ['top', 'right', 'bottom', 'left']) {
+        const hitArea = document.createElement('span');
+        hitArea.dataset.surveyOutlineEdge = edge;
+        hitArea.setAttribute('aria-hidden', 'true');
+        dismiss.append(hitArea);
+      }
+      const caption = document.createElement('span');
+      caption.dataset.surveyOutlineLabel = '';
+      caption.textContent = label;
+      dismiss.append(caption);
+      dismiss.addEventListener('click', (event) => {
+        event.stopPropagation();
+        demoDisplay.outlines = false;
+        applyClinicDisplay();
+        update();
+      });
+      frame.append(dismiss);
     },
   };
 }

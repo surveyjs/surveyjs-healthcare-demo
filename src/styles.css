@@ -349,22 +349,68 @@
     border-radius: inherit;
     pointer-events: none;
   }
-  &::after {
-    content: attr(data-survey-component);
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 7;
-    padding: 4px 8px;
-    border-radius: 0 var(--radius-card) 0 8px;
-    background: var(--color-primary);
-    color: var(--color-primary-foreground);
-    font: 600 10px/15px var(--font-sans);
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    pointer-events: none;
-  }
 }
+/* Keep Creator panes below the frame without changing their internal stacking. */
+[data-survey-component] > .svc-creator {
+  isolation: isolate;
+}
+
+/* Only the label and narrow outer edge catch clicks; the form stays interactive. */
+[data-survey-outline-dismiss] {
+  display: none;
+}
+:root[data-survey-outlines="true"] [data-survey-component] > [data-survey-outline-dismiss] {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: default;
+  pointer-events: none;
+}
+[data-survey-outline-dismiss]:focus-visible {
+  outline: 2px solid var(--color-highlight);
+  outline-offset: 2px;
+}
+[data-survey-outline-edge] {
+  position: absolute;
+  pointer-events: auto;
+}
+[data-survey-outline-edge="top"],
+[data-survey-outline-edge="bottom"] {
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+[data-survey-outline-edge="left"],
+[data-survey-outline-edge="right"] {
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+[data-survey-outline-edge="top"] { top: 0; }
+[data-survey-outline-edge="right"] { right: 0; }
+[data-survey-outline-edge="bottom"] { bottom: 0; }
+[data-survey-outline-edge="left"] { left: 0; }
+[data-survey-outline-label] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 4px 8px;
+  border-radius: 0 var(--radius-card) 0 8px;
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  font: 600 10px/15px var(--font-sans);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  pointer-events: auto;
+}
+
 @keyframes survey-component-glow {
   50% {
     box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-highlight) 5%, transparent), 0 0 30px var(--glow);
