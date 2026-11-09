@@ -1,4 +1,5 @@
 import { iconMarkup } from '../ui/Icon';
+import { createDemoMenu } from './demoMenu';
 import { applyClinicDisplay, demoDisplay, reapplyClinicThemes, saveDemoDisplay } from './clinicTheme';
 
 // Presentation preferences are separate from patient data and form answers.
@@ -19,11 +20,14 @@ function createDemoTools() {
   dock.setAttribute('aria-label', 'Demo Tools');
   dock.innerHTML =
     '<div class="demo-dock-panel relative flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1.5 shadow-dock">' +
+    `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS} demo-dock-menu-trigger" data-demo-menu-trigger aria-label="Healthcare" aria-describedby="demo-menu-tooltip">${iconMarkup('menu', 'size-4.5')}<span>Healthcare</span>${iconMarkup('chevron-down', 'size-3.5 opacity-60')}</button><span role="tooltip" id="demo-menu-tooltip" class="demo-dock-tooltip">Switch Demo</span></span>` +
     `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS}" data-demo-action="outlines" aria-label="Highlight SurveyJS" aria-describedby="demo-outlines-tooltip"></button><span role="tooltip" id="demo-outlines-tooltip" class="demo-dock-tooltip"></span></span>` +
     `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS}" data-demo-action="theme" aria-label="Switch Theme" aria-describedby="demo-theme-tooltip"></button><span role="tooltip" id="demo-theme-tooltip" class="demo-dock-tooltip">Switch Theme</span></span></div>`;
   const themeButton = dock.querySelector<HTMLButtonElement>('[data-demo-action="theme"]')!;
   const outlinesButton = dock.querySelector<HTMLButtonElement>('[data-demo-action="outlines"]')!;
   const outlinesTooltip = dock.querySelector<HTMLElement>('#demo-outlines-tooltip')!;
+  const menuButton = dock.querySelector<HTMLButtonElement>('[data-demo-menu-trigger]')!;
+  const menu = createDemoMenu(dock, menuButton);
 
   function update() {
     const dark = demoDisplay.mode === 'dark';
@@ -56,15 +60,11 @@ function createDemoTools() {
     }
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
-    const target =
-      event.key === 'Home'
-        ? outlinesButton
-        : event.key === 'End'
-          ? themeButton
-          : document.activeElement === themeButton
-            ? outlinesButton
-            : themeButton;
-    target.focus();
+    const buttons = [menuButton, outlinesButton, themeButton];
+    const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
+      : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+    buttons[next].focus();
   });
   update();
   document.body.append(dock);
@@ -73,6 +73,7 @@ function createDemoTools() {
   return {
     /** Moves the dock into an open modal dialog so it stays above it, or back to the page. */
     attach(container: HTMLElement = document.body) {
+      menu.close();
       if (topLayer && dock.matches(':popover-open')) dock.hidePopover();
       container.append(dock);
       if (topLayer) dock.showPopover();
