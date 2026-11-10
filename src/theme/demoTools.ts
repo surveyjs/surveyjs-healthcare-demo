@@ -1,12 +1,13 @@
 import { iconMarkup } from '../ui/Icon';
+import { createDemoMenu } from './demoMenu';
 import { applyClinicDisplay, demoDisplay, reapplyClinicThemes, saveDemoDisplay } from './clinicTheme';
 
 // Presentation preferences are separate from patient data and form answers.
 // `demo-dock` is a hook: modal dialogs shorten themselves while the dock is inside them.
 const DOCK_CLASS =
-  'demo-dock fixed inset-auto right-[calc(16px+env(safe-area-inset-right,0px))] bottom-[calc(16px+env(safe-area-inset-bottom,0px))] z-10000 m-0 flex w-max max-w-[calc(100vw-24px)] items-center gap-1 overflow-visible rounded-full border border-border bg-card/92 px-2 py-1.5 text-foreground shadow-dock backdrop-blur-[14px] backdrop:pointer-events-none backdrop:bg-transparent';
+  'demo-dock fixed inset-auto bottom-[calc(16px+env(safe-area-inset-bottom,0px))] left-1/2 z-10000 m-0 w-max max-w-[calc(100vw-24px)] -translate-x-1/2 overflow-visible rounded-full border-0 bg-transparent p-0 text-foreground backdrop:pointer-events-none backdrop:bg-transparent';
 const DOCK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-2.5 py-2 text-[11px] leading-5 font-semibold whitespace-nowrap text-foreground hover:bg-card-subtle focus-visible:outline-2 focus-visible:outline-offset-1 aria-pressed:bg-primary-soft aria-pressed:text-primary sm:gap-2 sm:px-3.5 sm:text-xs';
+  'inline-flex size-11 shrink-0 cursor-default items-center justify-center rounded-full text-sm leading-5 font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-1 aria-pressed:bg-muted';
 
 function createDemoTools() {
   const dock = document.createElement('div');
@@ -16,21 +17,24 @@ function createDemoTools() {
   const topLayer = typeof dock.showPopover === 'function';
   if (topLayer) dock.setAttribute('popover', 'manual');
   dock.setAttribute('role', 'toolbar');
-  dock.setAttribute('aria-label', 'Demo display options');
+  dock.setAttribute('aria-label', 'Demo Tools');
   dock.innerHTML =
-    `<button type="button" class="${DOCK_BUTTON_CLASS}" data-demo-action="theme"></button>` +
-    `<button type="button" class="${DOCK_BUTTON_CLASS}" data-demo-action="outlines" aria-label="Highlight SurveyJS components"></button>`;
+    '<div class="demo-dock-panel relative flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1.5 shadow-dock">' +
+    `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS} demo-dock-menu-trigger" data-demo-menu-trigger aria-label="Healthcare" aria-describedby="demo-menu-tooltip">${iconMarkup('menu', 'size-4.5')}<span>Healthcare</span>${iconMarkup('chevron-down', 'size-3.5 opacity-60')}</button><span role="tooltip" id="demo-menu-tooltip" class="demo-dock-tooltip">Switch Demo</span></span>` +
+    `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS} demo-dock-action" data-demo-action="outlines" aria-label="Highlight SurveyJS" aria-describedby="demo-outlines-tooltip"></button><span role="tooltip" id="demo-outlines-tooltip" class="demo-dock-tooltip"></span></span>` +
+    `<span class="demo-dock-control"><button type="button" class="${DOCK_BUTTON_CLASS} demo-dock-action" data-demo-action="theme" aria-label="Switch Theme" aria-describedby="demo-theme-tooltip"></button><span role="tooltip" id="demo-theme-tooltip" class="demo-dock-tooltip">Switch Theme</span></span></div>`;
   const themeButton = dock.querySelector<HTMLButtonElement>('[data-demo-action="theme"]')!;
   const outlinesButton = dock.querySelector<HTMLButtonElement>('[data-demo-action="outlines"]')!;
+  const outlinesTooltip = dock.querySelector<HTMLElement>('#demo-outlines-tooltip')!;
+  const menuButton = dock.querySelector<HTMLButtonElement>('[data-demo-menu-trigger]')!;
+  const menu = createDemoMenu(dock, menuButton);
 
   function update() {
     const dark = demoDisplay.mode === 'dark';
-    themeButton.innerHTML = iconMarkup(dark ? 'moon' : 'sun', 'size-4.5') + `<span>${dark ? 'Dark' : 'Light'}</span>`;
-    themeButton.setAttribute('aria-label', `Switch to ${dark ? 'light' : 'dark'} theme`);
-    themeButton.title = `Switch to ${dark ? 'light' : 'dark'} theme`;
-    outlinesButton.innerHTML = iconMarkup('maximize', 'size-4.5') + '<span>SurveyJS blocks</span>';
+    themeButton.innerHTML = iconMarkup(dark ? 'moon' : 'sun', 'size-4.5') + '<span class="demo-dock-action-label">Switch Theme</span>';
+    outlinesButton.innerHTML = iconMarkup('maximize', 'size-4.5') + '<span class="demo-dock-action-label">Highlight SurveyJS</span>';
     outlinesButton.setAttribute('aria-pressed', String(demoDisplay.outlines));
-    outlinesButton.title = (demoDisplay.outlines ? 'Hide' : 'Show') + ' outlines around SurveyJS components';
+    outlinesTooltip.textContent = (demoDisplay.outlines ? 'Hide' : 'Show') + ' SurveyJS Outlines';
   }
 
   dock.addEventListener('click', (event) => {
@@ -43,18 +47,24 @@ function createDemoTools() {
     saveDemoDisplay();
     update();
   });
+  for (const control of dock.querySelectorAll<HTMLElement>('.demo-dock-control')) {
+    control.addEventListener('pointerenter', () => delete dock.dataset.tooltipsDismissed);
+  }
+  dock.addEventListener('focusin', () => delete dock.dataset.tooltipsDismissed);
   dock.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !dock.dataset.tooltipsDismissed) {
+      dock.dataset.tooltipsDismissed = 'true';
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
-    const target =
-      event.key === 'Home'
-        ? themeButton
-        : event.key === 'End'
-          ? outlinesButton
-          : document.activeElement === themeButton
-            ? outlinesButton
-            : themeButton;
-    target.focus();
+    const buttons = [menuButton, outlinesButton, themeButton];
+    const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
+      : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+    buttons[next].focus();
   });
   update();
   document.body.append(dock);
@@ -63,6 +73,7 @@ function createDemoTools() {
   return {
     /** Moves the dock into an open modal dialog so it stays above it, or back to the page. */
     attach(container: HTMLElement = document.body) {
+      menu.close();
       if (topLayer && dock.matches(':popover-open')) dock.hidePopover();
       container.append(dock);
       if (topLayer) dock.showPopover();
@@ -71,8 +82,35 @@ function createDemoTools() {
       const parent = element.parentElement;
       // When a card contains only a native form, place its glow on the card so
       // overflow clipping cannot hide the halo behind the SurveyJS surface.
-      const frame = parent?.matches('.panel') && parent.children.length === 1 ? parent : element;
+      const frame =
+        parent?.matches('.panel') &&
+        parent.querySelectorAll(':scope > :not([data-survey-outline-dismiss])').length === 1
+          ? parent
+          : element;
       frame.dataset.surveyComponent = label;
+      if (frame.querySelector(':scope > [data-survey-outline-dismiss]')) return;
+      const dismiss = document.createElement('button');
+      dismiss.type = 'button';
+      dismiss.dataset.surveyOutlineDismiss = '';
+      dismiss.lang = 'en';
+      dismiss.setAttribute('aria-label', `${label}. Hide SurveyJS Outlines`);
+      for (const edge of ['top', 'right', 'bottom', 'left']) {
+        const hitArea = document.createElement('span');
+        hitArea.dataset.surveyOutlineEdge = edge;
+        hitArea.setAttribute('aria-hidden', 'true');
+        dismiss.append(hitArea);
+      }
+      const caption = document.createElement('span');
+      caption.dataset.surveyOutlineLabel = '';
+      caption.textContent = label;
+      dismiss.append(caption);
+      dismiss.addEventListener('click', (event) => {
+        event.stopPropagation();
+        demoDisplay.outlines = false;
+        applyClinicDisplay();
+        update();
+      });
+      frame.append(dismiss);
     },
   };
 }
