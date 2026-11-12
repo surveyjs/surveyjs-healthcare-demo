@@ -60,6 +60,31 @@ test('the search form header opens its schema in the builder', async ({ page }) 
   await expect(builder).toBeHidden();
 });
 
+test('the JSON tab edits the schema in a Monaco editor that follows the display theme', async ({ page }) => {
+  // Survey Creator 3.2.5 leaves a second editor (and logs "Element already has context attribute")
+  // when StrictMode remounts the JSON tab in dev; fixed upstream after 3.2.5.
+  const strictModeRemountError = 'Element already has context attribute';
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !message.text().includes(strictModeRemountError)) errors.push(message.text());
+  });
+
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Edit in Builder: Patient Registration Form' }).click();
+  const builder = page.getByRole('dialog', { name: 'Form Builder: Patient Registration Form' });
+  await builder.getByText('JSON Editor', { exact: true }).click();
+
+  const editor = builder.locator('.monaco-editor').last();
+  await expect(editor).toBeVisible();
+  await expect(editor).toHaveClass(/\bvs\b/);
+  await expect(editor.locator('.view-lines')).toContainText('"title": "Patient Registration Form"');
+
+  await page.getByRole('toolbar', { name: 'Demo Tools' }).getByRole('button', { name: 'Switch Theme' }).click();
+  await expect(editor).toHaveClass(/\bvs-dark\b/);
+  expect(errors).toEqual([]);
+});
+
 test('Save & Apply from a dialog-opened builder closes the creator and reopens the dialog', async ({ page, request }) => {
   await page.goto('/patients/p-emma-thompson');
 
