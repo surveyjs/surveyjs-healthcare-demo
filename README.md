@@ -55,7 +55,7 @@ The shared header shows the HEALTHCARE brand, role-appropriate route links with 
 | Build tool | Vite |
 | Routing | `react-router-dom` |
 | Forms | `survey-core`, `survey-react-ui` |
-| Form builder | `survey-creator-core`, `survey-creator-react` |
+| Form builder | `survey-creator-core`, `survey-creator-react`; `monaco-editor` for the Creator's JSON tab |
 | PDF export | `survey-pdf` (SurveyJS PDF Generator; commercial license required for commercial use) |
 | Backend | Express + `better-sqlite3` (SQLite) |
 | Styling | Tailwind CSS v4 utilities, design tokens in [styles.css](src/styles.css), and a Tailwind → SurveyJS adapter ([tailwind-adapter.css](src/survey/tailwind-adapter.css)) |
@@ -75,7 +75,7 @@ The integration follows the standard SurveyJS React setup, wrapped in two reusab
    - places validation errors below the inputs (`questionErrorLocation: "bottom"`) and suppresses the completion page,
    - applies initial `data` for edit workflows and supports `readOnly` (display mode),
    - hands validated answers to `onSave` from `onCompleting` (the form stays live), reports `onValueChanged`, and adds host actions (Cancel, Reset, Edit … Form) as SurveyJS footer navigation items.
-3. **[SurveyCreatorModal.tsx](src/survey/SurveyCreatorModal.tsx)** — embeds the Survey Creator in a full-viewport dialog themed with the clinic palette. It loads the same JSON the Form Library renders; **Reset to Default** loads the bundled schema, and **Save & Apply Form** persists the schema through `formRepository`, closes the creator, and returns to the view the builder was opened from (if it was opened from inside a form dialog, that dialog reopens with the updated schema):
+3. **[SurveyCreatorModal.tsx](src/survey/SurveyCreatorModal.tsx)** — embeds the Survey Creator in a full-viewport dialog themed with the clinic palette. It loads the same JSON the Form Library renders; **Reset to Default** loads the bundled schema, and **Save & Apply Form** persists the schema through `formRepository`, closes the creator, and returns to the view the builder was opened from (if it was opened from inside a form dialog, that dialog reopens with the updated schema). The **JSON Editor** tab uses the Monaco editor: [monacoSetup.ts](src/survey/monacoSetup.ts) bundles Monaco with its JSON language worker (Vite `?worker` imports, no CDN) and exposes it as `window.monaco` before the Creator is constructed, which makes Survey Creator (3.2.5+) pick its built-in Monaco JSON editor:
 
 ```text
 SurveyJS JSON → Survey Creator → edited JSON → Form Library → application form
@@ -104,7 +104,7 @@ One set of Tailwind tokens drives both the SurveyJS forms and the surrounding cl
 - **Design tokens** — [styles.css](src/styles.css) declares the clinic palette, font, and radius in Tailwind's `@theme` (`--color-primary`, `--color-card`, `--color-foreground`, …) and redefines the colors under `[data-theme="dark"]`. The app UI is built from Tailwind utilities (`bg-card`, `text-primary`, …); shared class bundles and primitives live in [components.tsx](src/ui/components.tsx).
 - **Tailwind → SurveyJS adapter** — [tailwind-adapter.css](src/survey/tailwind-adapter.css) maps those semantic tokens onto SurveyJS's `--sjs2-*` variables, so forms follow the palette (and dark mode) with no colors in JS. A retuning block in [styles.css](src/styles.css) keeps the clinic's form density (44px controls, roomy nested panels) on top of the adapter's compact Tailwind defaults.
 - **Base and per-form themes** — [clinicTheme.ts](src/theme/clinicTheme.ts) applies `DefaultLightPanelless` / `DefaultDarkPanelless` for the remaining semantic slots (minus any variable a stylesheet already sets, so the adapter always wins) plus host-specific layout (tighter insets on narrow screens, flush filter forms, dynamic-panel spacing).
-- **Creator** — `applyClinicCreatorTheme()` points the Survey Creator's panes at the same tokens and keeps its native density.
+- **Creator** — `applyClinicCreatorTheme()` points the Survey Creator's panes at the same tokens and keeps its native density, and switches the Monaco JSON editor between its `vs` and `vs-dark` themes with the display mode.
 - **Basic headers** — schemas use `"headerView": "basic"`, so form titles and descriptions render inside the card; [styles.css](src/styles.css) contains the small layout bridges SurveyJS needs (header divider, search header actions, dynamic-panel header spacing).
 - **Dark mode and outlines** — [demoTools.ts](src/theme/demoTools.ts) renders the display dock (a manual popover, moved into open dialogs so it stays above the top layer). It switches `data-theme` and re-themes every mounted form and Creator; the outline toggle marks each `[data-survey-component]` mount point.
 
@@ -161,6 +161,7 @@ src/
     schemas/            SurveyJS JSON definitions
     SurveyRenderer      Reusable renderer (Model creation, initial data, validation, completion)
     SurveyCreatorModal  Embedded Survey Creator
+    monacoSetup         Monaco editor + JSON worker for the Creator's JSON tab
     tailwind-adapter.css Tailwind tokens → SurveyJS --sjs2-* variables
   theme/
     clinicTheme         SurveyJS base, per-form layout and Creator themes (light/dark)

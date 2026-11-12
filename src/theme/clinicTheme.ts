@@ -1,6 +1,7 @@
 import { ITheme, Model, SvgRegistry } from 'survey-core';
 import { DefaultDarkPanelless, DefaultLightPanelless } from 'survey-core/themes';
 import type { SurveyCreator } from 'survey-creator-react';
+import { applyMonacoTheme } from '../survey/monacoSetup';
 import { FEATHER_ICONS } from '../ui/featherIcons';
 
 // Colors reach SurveyJS from the Tailwind tokens in styles.css through
@@ -185,6 +186,7 @@ export function applyClinicCreatorTheme(editor: SurveyCreator | null): void {
   const preview = (editor.getPlugin('preview') as any)?.model?.survey as Model | undefined;
   const previewState = preview ? { data: structuredClone(preview.data), page: preview.currentPageNo } : null;
   editor.preferredColorPalette = demoDisplay.mode;
+  applyMonacoTheme(demoDisplay.mode);
   editor.applyCreatorTheme(getClinicCreatorTheme() as any);
   editor.applyTheme(getClinicFormTheme({ dynamicPanels: JSON.stringify(editor.JSON).includes('paneldynamic') }));
   const updatedPreview = (editor.getPlugin('preview') as any)?.model?.survey as Model | undefined;

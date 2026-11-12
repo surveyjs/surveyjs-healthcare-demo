@@ -8,6 +8,7 @@ import { applyClinicCreatorTheme, setActiveCreator } from '../theme/clinicTheme'
 import { demoTools } from '../theme/demoTools';
 import { Icon } from '../ui/Icon';
 import { Button, iconButtonClass } from '../ui/components';
+import { installMonaco } from './monacoSetup';
 
 interface SurveyCreatorModalProps {
   formId: FormId;
@@ -22,6 +23,7 @@ export const SurveyCreatorModal: React.FC<SurveyCreatorModalProps> = ({ formId, 
   const containerRef = useRef<HTMLDivElement>(null);
 
   const creator = useMemo(() => {
+    installMonaco();
     const instance = new SurveyCreator({ showLogicTab: true, showJSONEditorTab: true, autoSaveEnabled: false });
     instance.JSON = formRepository.getForm(formId);
     applyClinicCreatorTheme(instance);
